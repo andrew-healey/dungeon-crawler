@@ -104,7 +104,7 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 
   // Override the current require with this new one
   return newRequire;
-})({"../node_modules/three/build/three.module.js":[function(require,module,exports) {
+})({"node_modules/three/build/three.module.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -34249,15 +34249,15 @@ function () {
    * Describes the Entity class, which handles movement, rendering and collision of objects.
    * @constructor
    * @param pos {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
+   * @param angle {Number} - The angle by which the Entity (containing the children as well) is rotated about its origin.
+   * @param size {Number} - The radius of the hitbox of the Entity.
+   * @param speed {Number} - The initial speed of the Entity-like for bullets
+   * @param vel {Object {x {Number},y {Number},z {Number}}} - The direction of the velocity vector.
+   * @param angleComponents {Object {... {Number}}} - The individual components of the angle, which are summed to find the net angle.
+   * @todo Add a y coordinate that defaults to 0
    */
-  function Entity() {
-    var pos = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
-      x: 0,
-      z: 0
-    };
-    var angle = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
-    var speed = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+  function Entity(pos, angle, size, speed) {
+    var angleComponents = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
     _classCallCheck(this, Entity);
 
@@ -34270,10 +34270,15 @@ function () {
     this.angle = angle;
     this.size = size;
     this.speed = speed;
-    console.log(this);
+    this.angleComponents = angleComponents;
   }
 
   _createClass(Entity, [{
+    key: "rotateComponent",
+    value: function rotateComponent(changeObj) {
+      return Object.assign(this.angleComponents, changeObj);
+    }
+  }, {
     key: "draw",
     value: function draw(scene) {
       if (this.initGeometry) {
@@ -34434,12 +34439,17 @@ function (_Entity) {
       }));
       this.group = new THREE.Group();
       this.group.add(this.core);
-      this.group.add(this.box); // this.group.position.set(0, 0, 0);
-
+      this.group.add(this.box);
+      this.group.position.set(0, 0, 0);
+      this.group.name = 'playersprite';
+      console.log(this.group, this.group.position);
       this.camera.controls.target = this.group.position;
+      console.log(this.camera.controls);
       this.camera.controls.update();
       return this.group;
-    }
+    } // initGeometryCB() {
+    // }
+
   }, {
     key: "equip",
     value: function equip(weapon) {
@@ -34485,6 +34495,7 @@ function (_Entity) {
       }
 
       this.camera.position.set(cameraOffset.x + this.pos.x, cameraOffset.y, cameraOffset.z + this.pos.z);
+      this.camera.controls.target = this.geom.position;
       this.camera.controls.update();
     }
   }, {
@@ -34603,17 +34614,17 @@ function (_Entity2) {
   _createClass(Creature, [{
     key: "initGeometry",
     value: function initGeometry() {
-      this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+      this.model = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
         wireframe: false,
         color: 0xffffff
       }));
-      return this.box;
+      return this.model;
     }
   }, {
     key: "update",
     value: function update(dt) {
       if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
-      this.updateByDirection(dt, this.box);
+      this.updateByDirection(dt, this.model);
 
       if (this.room) {
         if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {
@@ -34659,7 +34670,7 @@ function (_Entity2) {
 }(Entity);
 
 exports.Creature = Creature;
-},{"three":"../node_modules/three/build/three.module.js"}],"game.js":[function(require,module,exports) {
+},{"three":"node_modules/three/build/three.module.js"}],"game.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35124,7 +35135,7 @@ function () {
 }();
 
 exports.Level = Level;
-},{"three":"../node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
+},{"three":"node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35313,7 +35324,7 @@ function (_Weapon2) {
 }(Weapon);
 
 exports.MeleeWeapon = MeleeWeapon;
-},{"./entity.js":"entity.js","three":"../node_modules/three/build/three.module.js"}],"index.js":[function(require,module,exports) {
+},{"./entity.js":"entity.js","three":"node_modules/three/build/three.module.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var THREE = _interopRequireWildcard(require("three"));
@@ -35421,7 +35432,7 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
-},{"three":"../node_modules/three/build/three.module.js","three-orbit-controls":"../node_modules/three-orbit-controls/index.js","./game.js":"game.js","./entity.js":"entity.js","./weapon.js":"weapon.js"}],"../../../../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"three":"node_modules/three/build/three.module.js","three-orbit-controls":"../node_modules/three-orbit-controls/index.js","./game.js":"game.js","./entity.js":"entity.js","./weapon.js":"weapon.js"}],"../../../../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -35448,7 +35459,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56268" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58455" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

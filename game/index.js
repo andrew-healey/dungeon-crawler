@@ -106,7 +106,6 @@ document.body.addEventListener('mouseup', function (evt) {
 function animate() {
 
     requestAnimationFrame(animate);
-
     let current = +new Date;
     let dt = (current - prev) / 1000;
 
