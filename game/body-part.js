@@ -21,7 +21,43 @@ class BodyPart extends Entity {
     this.yRotation = 0;
     this.animationTime = 0;
     this.period = this.size / 2;
-    this.customAnimation=false;
+    this.customAnimation = false;
+  }
+
+  initGeometry() {
+    const ALL_TYPES = ["gun": {
+      x: 0.6,
+      y: 0.6,
+      z: 1
+    }, "sword": {
+      x: 0.3,
+      y: 0.1,
+      z: 1
+    }, "hand": {
+      x: 0.5,
+      y: 1,
+      z: 1
+    }, "body": {
+      radius: 1
+    }, "leg": {
+      x: 0.2,
+      y: 1,
+      z: 0.2
+    }, "arm": {
+      x: 0.2,
+      y: 0.2,
+      z: 1
+    }];
+    let thisType = ALL_TYPES[specificId] || thisType[weaponId];
+    this.model = new THREE.Group();
+    this.piece = new THREE.Box3(this.size * thisType.x, this.size * thisType.y, this.size * thisType.z);
+    for (child of children) {
+      this.model.add(child.initGeometry());
+    }
+    this.model.position.set(this.position.x, this.position.y, this.position.z);
+    this.model.rotateY(0); //TODO change this to the real y value, or something that will support BodyPart
+    this.model.rotateX(this.angle);
+    return this.model;
   }
 
   /**
@@ -103,7 +139,7 @@ class BodyPart extends Entity {
       if (weaponNum > 0) return weaponNum - 1;
       if (this.specificType === "sword") this.parent.angle = Math.atan(Math.tan(Math.abs(timeUsed * velocity / this.period)));
       else if (this.specificType === "gun") {
-        if(timeUsed<this.period/4||timeUsed>3*this.period/4) return -1;
+        if (timeUsed < this.period / 4 || timeUsed > 3 * this.period / 4) return -1;
         this.customAnimation = true;
       }
       return -1;
