@@ -74,7 +74,7 @@ export class Entity {
       z: dt * unit.z * this.speed,
     }
   }
-  updateByVelocity(dt, mesh) {
+  updateByDt(dt, mesh) {
     this.pos.x += dt * this.vel.x * this.speed;
     this.pos.z += dt * this.vel.z * this.speed;
     return {
