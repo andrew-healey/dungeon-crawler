@@ -34426,7 +34426,15 @@ function () {
    * @constructor
    * @param pos {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
    */
-  function Entity(scene, pos, angle, size, speed) {
+  function Entity() {
+    var pos = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+      x: 0,
+      z: 0
+    };
+    var angle = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var speed = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+
     _classCallCheck(this, Entity);
 
     this.room = null;
@@ -34438,18 +34446,22 @@ function () {
     this.angle = angle;
     this.size = size;
     this.speed = speed;
-    this.scene = scene;
-    this.initGeometry && this.scene.add(this.initGeometry());
   }
 
   _createClass(Entity, [{
-    key: "mount",
-    value: function mount(room) {
+    key: "render",
+    value: function render() {
+      this.scene = this.room.scene;
+      this.initGeometry && this.scene.add(this.initGeometry());
+    }
+  }, {
+    key: "enter",
+    value: function enter(room) {
       this.room = room;
     }
   }, {
-    key: "unmount",
-    value: function unmount() {
+    key: "exit",
+    value: function exit() {
       this.room = null;
     }
   }, {
@@ -34539,6 +34551,28 @@ function () {
     value: function angleTo(pt) {
       return -Math.atan2(pt.x, pt.z) - this.angle;
     }
+  }, {
+    key: "isIn",
+    value: function isIn(entity) {
+      // console.log(entity, this)
+      // console.log(this.pos.x, entity.pos.x + entity.size.width);
+      // console.log(this.pos.z > entity.pos.z + entity.size.depth);
+      // console.log(this.pos.x + this.size < entity.pos.x);
+      // console.log(this.pos.z + this.size < entity.pos.z);
+      if (this.pos.x > entity.pos.x + entity.size.width) return false;
+      if (this.pos.z > entity.pos.z + entity.size.depth) return false;
+      if (this.pos.x + this.size < entity.pos.x) return false;
+      if (this.pos.z + this.size < entity.pos.z) return false;
+      return true;
+    }
+  }, {
+    key: "clampTo",
+    value: function clampTo(entity) {
+      if (this.pos.x > entity.pos.x + entity.size.width) this.pos.x = entity.pos.x + entity.size.width;
+      if (this.pos.z > entity.pos.z + entity.size.depth) this.pos.z = entity.pos.z + this.room.size.depth;
+      if (this.pos.x < entity.pos.x) this.pos.x = entity.pos.x;
+      if (this.pos.z < entity.pos.z) this.pos.z = entity.pos.z;
+    }
   }]);
 
   return Entity;
@@ -34563,14 +34597,8 @@ function (_Entity) {
 
     _this2.camera.controls.update();
 
-    _this2.weapon = null;
+    _this2.weapons = [];
     _this2.triggering = false;
-    var material = new THREE.LineBasicMaterial({
-      color: 0x0000ff
-    }); // window.setInterval(() => {
-    //     this.angle += 0.001;
-    // }, 1);
-
     return _this2;
   }
 
@@ -34585,79 +34613,94 @@ function (_Entity) {
       return this.box;
     }
   }, {
-    key: "mountWeapon",
-    value: function mountWeapon(weapon) {
-      this.weapon = weapon;
-      weapon.mount(this);
+    key: "equip",
+    value: function equip(weapon) {
+      this.weapons.unshift(weapon);
+      this.weapon.setOwner(this);
     }
   }, {
-    key: "unmountWeapon",
-    value: function unmountWeapon() {
-      this.weapon = null;
+    key: "drop",
+    value: function drop(weapon) {
+      this.weapons.splice(this.weapons.indexof(weapons), 1);
       weapon.unmount(this);
+    }
+  }, {
+    key: "enter",
+    value: function enter(room) {
+      this.room = room;
+      room.entered(this);
     }
   }, {
     key: "update",
     value: function update(dt) {
+      var _this3 = this;
+
       var cameraOffset = {
         x: this.camera.position.x - this.pos.x,
+        y: this.camera.position.y,
         z: this.camera.position.z - this.pos.z
       };
-      var p = Object.assign({}, this.pos);
       this.updateByVelocity(dt, this.box);
 
       if (this.room) {
-        if (this.pos.x > this.room.pos.x + this.room.size.width) this.pos.x = this.room.pos.x + this.room.size.width;
-        if (this.pos.z > this.room.pos.z + this.room.size.depth) this.pos.z = this.room.pos.z + this.room.size.depth;
-        if (this.pos.x < this.room.pos.x) this.pos.x = this.room.pos.x;
-        if (this.pos.z < this.room.pos.z) this.pos.z = this.room.pos.z;
+        console.log(this.halls, this.isIn(this.halls[0]));
+
+        if (!this.halls.some(function (h) {
+          return _this3.isIn(h);
+        }) && !this.room.activated) {
+          this.clampTo(this.room);
+        }
       }
 
       this.box.position.x = this.pos.x;
       this.box.position.z = this.pos.z;
       this.box.rotation.y = -this.angle;
-      if (this.weapon) this.weapon.update(dt);
-      this.camera.position.set(cameraOffset.x + this.pos.x, this.camera.position.y, cameraOffset.z + this.pos.z);
+
+      if (this.weapons.length >= 1 && this.triggering) {
+        this.weapons[0].trigger();
+      }
+
+      this.camera.position.set(cameraOffset.x + this.pos.x, cameraOffset.y, cameraOffset.z + this.pos.z);
       this.camera.controls.update();
     }
   }, {
     key: "trigger",
     value: function trigger(v) {
-      this.weapon.triggering = v;
+      this.triggering = v;
     }
   }, {
     key: "keyDown",
     value: function keyDown(evt) {
-      var _this3 = this;
+      var _this4 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this3.walkX(1);
+          return _this4.walkX(1);
         },
         'ArrowRight': function ArrowRight() {
-          return _this3.walkX(-1);
+          return _this4.walkX(-1);
         },
         'ArrowUp': function ArrowUp() {
-          return _this3.walkZ(1);
+          return _this4.walkZ(1);
         },
         'ArrowDown': function ArrowDown() {
-          return _this3.walkZ(-1);
+          return _this4.walkZ(-1);
         },
         'KeyA': function KeyA() {
-          return _this3.walkX(1);
+          return _this4.walkX(1);
         },
         'KeyD': function KeyD() {
-          return _this3.walkX(-1);
+          return _this4.walkX(-1);
         },
         'KeyW': function KeyW() {
-          return _this3.walkZ(1);
+          return _this4.walkZ(1);
         },
         'KeyS': function KeyS() {
-          return _this3.walkZ(-1);
+          return _this4.walkZ(-1);
         },
         'Space': function Space() {
-          return _this3.weapon && _this3.trigger(true);
+          return _this4.weapon && _this4.trigger(true);
         }
       })[key] || function () {
         return 1;
@@ -34666,36 +34709,36 @@ function (_Entity) {
   }, {
     key: "keyUp",
     value: function keyUp(evt) {
-      var _this4 = this;
+      var _this5 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this4.walkX(0);
+          return _this5.walkX(0);
         },
         'ArrowRight': function ArrowRight() {
-          return _this4.walkX(0);
+          return _this5.walkX(0);
         },
         'ArrowUp': function ArrowUp() {
-          return _this4.walkZ(0);
+          return _this5.walkZ(0);
         },
         'ArrowDown': function ArrowDown() {
-          return _this4.walkZ(0);
+          return _this5.walkZ(0);
         },
         'KeyA': function KeyA() {
-          return _this4.walkX(0);
+          return _this5.walkX(0);
         },
         'KeyD': function KeyD() {
-          return _this4.walkX(0);
+          return _this5.walkX(0);
         },
         'KeyW': function KeyW() {
-          return _this4.walkZ(0);
+          return _this5.walkZ(0);
         },
         'KeyS': function KeyS() {
-          return _this4.walkZ(0);
+          return _this5.walkZ(0);
         },
         'Space': function Space() {
-          return _this4.weapon && _this4.trigger(false);
+          return _this5.weapon && _this5.trigger(false);
         }
       })[key] || function () {
         return 1;
@@ -34704,12 +34747,12 @@ function (_Entity) {
   }, {
     key: "mouseDown",
     value: function mouseDown(evt) {
-      this.weapon && this.trigger(true);
+      this.weapon.length >= 1 && this.trigger(true);
     }
   }, {
     key: "mouseUp",
     value: function mouseUp(evt) {
-      this.weapon && this.trigger(false);
+      this.trigger(false);
     }
   }]);
 
@@ -34724,13 +34767,13 @@ function (_Entity2) {
   _inherits(Creature, _Entity2);
 
   function Creature(room, scene, pos, size) {
-    var _this5;
+    var _this6;
 
     _classCallCheck(this, Creature);
 
-    _this5 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, scene, pos, Math.random() * Math.PI * 2, size, 20));
-    _this5.room = room;
-    return _this5;
+    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, scene, pos, Math.random() * Math.PI * 2, size, 20));
+    _this6.room = room;
+    return _this6;
   }
 
   _createClass(Creature, [{
@@ -34801,7 +34844,7 @@ exports.Creature = Creature;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.WaveRoom = exports.Room = exports.Hall = void 0;
+exports.Level = exports.Room = exports.WaveRoom = exports.Hall = void 0;
 
 var _seedRandom = _interopRequireDefault(require("seed-random"));
 
@@ -34815,19 +34858,23 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _get(target, property, receiver) { if (typeof Reflect !== "undefined" && Reflect.get) { _get = Reflect.get; } else { _get = function _get(target, property, receiver) { var base = _superPropBase(target, property); if (!base) return; var desc = Object.getOwnPropertyDescriptor(base, property); if (desc.get) { return desc.get.call(receiver); } return desc.value; }; } return _get(target, property, receiver || target); }
+
+function _superPropBase(object, property) { while (!Object.prototype.hasOwnProperty.call(object, property)) { object = _getPrototypeOf(object); if (object === null) break; } return object; }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
@@ -34837,54 +34884,201 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // import {
 //     Player
 // } from './'
 // export RangedWeapon;
-var Hall = function Hall(scene, player, size, from, to, vertical) {
+var Hall = function Hall(scene, player) {
+  var _this = this;
+
+  var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
+  var from = arguments.length > 3 ? arguments[3] : undefined;
+  var to = arguments.length > 4 ? arguments[4] : undefined;
+  var vertical = arguments.length > 5 ? arguments[5] : undefined;
+
   _classCallCheck(this, Hall);
 
-  if (vertical) {//     this.size = {
-    //         width: size,
-    //         depth: from.pos.z > to.pos.z ?
-    //             from.pos.z - from.size.depth - to.pos.z : to.pos.z - to.size.depth - from.pos.z
-    //     }
-    //     this.pos = {
-    //         z: from.pos.z > to.pos.z ?
-    //             from.pos.z - from.size.depth - to.pos.z : to.pos.z - to.size.depth - from.pos.z,
-    //         x:
-    //     }
-    // } else {
-    //     this.size = {
-    //         depth: size,
-    //         width: from.pos.x > to.pos.x ?
-    //             from.pos.x - from.size.width - to.pos.x : to.pos.x - to.size.width - from.pos.x
-    //     }
-    //     this.pos = {
-    //         x: from.pos.x > to.pos.x ?
-    //             from.pos.x - from.size.width - to.pos.x : to.pos.x - to.size.width - from.pos.x
-    //         z:
-    //     }
+  this.from = from;
+  this.to = to;
+  this.to.connect(this, from);
+  this.from.connect(this, to);
+  var fromTop = vertical ? from.pos.z > to.pos.z : from.pos.x > to.pos.y;
+  var x, z, width, depth;
+
+  if (vertical) {
+    width = size;
+    x = from.size.width / 2 + from.pos.x;
+
+    if (fromTop) {
+      z = from.pos.z - from.size.depth;
+      depth = z - to.size.depth;
+    } else {
+      z = to.pos.z - to.size.depth;
+      depth = z - from.size.depth;
+    }
+  } else {
+    depth = size;
+    z = from.size.depth / 2 + from.pos.z;
+
+    if (fromTop) {
+      x = from.pos.x - from.size.width - 10;
+      width = Math.abs(x - to.size.width);
+    } else {
+      x = to.pos.x - to.size.width - 10;
+      width = Math.abs(x - from.size.width);
+    }
   }
+
+  this.pos = {
+    x: x,
+    z: z
+  };
+  this.size = {
+    width: width,
+    depth: depth
+  };
+  console.log(this.pos, this.size);
+  this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
+    color: 0x888888,
+    side: THREE.DoubleSide
+  }));
+  this.floor.rotateX(Math.PI / 2);
+  this.floor.position.y = -2;
+  this.floor.position.x = -this.pos.x;
+  this.floor.position.z = -this.pos.z;
+  this.walls = new THREE.Group();
+  this.walls.add(this.floor);
+  var walls = (vertical ? [[0, 1, 1, 0], [0, 0, 1, 0]] : [[0, 0, 0, 1], [1, 0, 0, 1]]).map(function (_ref, i) {
+    var _ref2 = _slicedToArray(_ref, 4),
+        x = _ref2[0],
+        z = _ref2[1],
+        width = _ref2[2],
+        depth = _ref2[3];
+
+    var boxWidth = width * size.width;
+    var boxHeight = depth * size.depth;
+    var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+    var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+      color: 0x00ff00 + i * 0xff / 2
+    }));
+    wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
+    return wall;
+  });
+  walls.forEach(function (w) {
+    return _this.walls.add(w);
+  });
+  scene.add(this.walls);
+  this.walls.position.x = this.pos.x;
+  this.walls.position.z = this.pos.z;
 };
 
 exports.Hall = Hall;
 
+var WaveRoom =
+/*#__PURE__*/
+function (_Room) {
+  _inherits(WaveRoom, _Room);
+
+  function WaveRoom(scene, player, size, pos) {
+    var _this2;
+
+    _classCallCheck(this, WaveRoom);
+
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, scene, player, size, pos));
+    _this2.enemies = [];
+    _this2.raycaster = new THREE.Raycaster();
+    _this2.mouse = {
+      x: 0,
+      y: 0
+    };
+
+    _this2.generateWave();
+
+    return _this2;
+  }
+
+  _createClass(WaveRoom, [{
+    key: "generateWave",
+    value: function generateWave() {
+      var _this3 = this;
+
+      this.enemies = Array(5).fill(0).map(function (a) {
+        return new _entity.Creature(_this3, _this3.scene, {
+          x: Math.random() * _this3.size.width + _this3.pos.x,
+          z: Math.random() * _this3.size.depth + _this3.pos.z
+        }, 2);
+      });
+    }
+  }, {
+    key: "updateEnemies",
+    value: function updateEnemies(dt) {
+      var _this4 = this;
+
+      this.enemies.forEach(function (e) {
+        e.update(dt);
+
+        for (var i = 0; i < _this4.bullets.length; i++) {
+          var b = _this4.bullets[i];
+
+          if (b.collides(e)) {
+            _this4.deleteBullet(b);
+
+            _this4.deleteEnemy(e);
+
+            return;
+          }
+        }
+      });
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      this.raycaster.setFromCamera(this.mouse, this.player.camera);
+      var i = this.raycaster.intersectObject(this.floor);
+
+      if (i.length > 0) {
+        var pt = i[0].point;
+        this.player.lookAt(pt);
+
+        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
+          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
+        }
+      }
+
+      _get(_getPrototypeOf(WaveRoom.prototype), "update", this).call(this, dt);
+
+      this.updateEnemies(dt);
+    }
+  }, {
+    key: "deleteEnemy",
+    value: function deleteEnemy(enemy) {
+      this.scene.remove(enemy.box);
+      enemy.box.geometry.dispose();
+      enemy.box.material.dispose();
+      delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
+    }
+  }, {
+    key: "mouseMove",
+    value: function mouseMove(evt) {
+      this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
+      this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    }
+  }]);
+
+  return WaveRoom;
+}(Room);
+
+exports.WaveRoom = WaveRoom;
+
 var Room =
 /*#__PURE__*/
 function () {
-  function Room(scene, player, size, pos) {
-    var _this = this;
-
+  function Room(level, size, pos) {
     _classCallCheck(this, Room);
 
-    this.scene = scene;
+    this.level = level;
     this.bullets = [];
     this.activated = false;
     this.unlocked = true;
@@ -34895,92 +35089,67 @@ function () {
       'w': null
     };
     this.listeners = {};
-    this.player = player;
-    player.mount(this);
-    this.playerEntered = false;
+    this.player = null;
     this.pos = pos;
     this.size = size;
-    this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
-      color: 0x555555,
-      side: THREE.DoubleSide
-    }));
-    this.floor.rotateX(Math.PI / 2);
-    this.floor.position.y = -2;
-    this.floor.position.x = -pos.x;
-    this.floor.position.z = -pos.z;
-    this.walls = new THREE.Group();
-    this.walls.add(this.floor);
-    var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref, i) {
-      var _ref2 = _slicedToArray(_ref, 4),
-          x = _ref2[0],
-          z = _ref2[1],
-          width = _ref2[2],
-          depth = _ref2[3];
-
-      var boxWidth = width * size.width;
-      var boxHeight = depth * size.depth;
-      var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
-      var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-        color: 0x00ff00 + i * 0xff / 4
-      }));
-      wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
-      return wall;
-    });
-    walls.forEach(function (w) {
-      return _this.walls.add(w);
-    });
-    scene.add(this.walls);
-    this.walls.position.x = this.pos.x;
-    this.walls.position.z = this.pos.z;
-  } //* Events
-
+  }
 
   _createClass(Room, [{
-    key: "on",
-    value: function on(event, func) {
-      if (this.listeners.hasOwnProperty(event)) {
-        this.listeners[event].push(func);
-      } else {
-        this.listeners[event] = [func];
-      }
+    key: "drawFloor",
+    value: function drawFloor(group) {
+      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
+        color: 0x555555,
+        side: THREE.DoubleSide
+      }));
+      this.floor.rotateX(Math.PI / 2);
+      this.floor.position.y = -2;
+      this.floor.position.x = -pos.x;
+      this.floor.position.z = -pos.z;
+      group.add(this.floor);
     }
   }, {
-    key: "emit",
-    value: function emit(emitter, event) {
-      var _this2 = this;
+    key: "drawWalls",
+    value: function drawWalls(group) {
+      var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref3, i) {
+        var _ref4 = _slicedToArray(_ref3, 4),
+            x = _ref4[0],
+            z = _ref4[1],
+            width = _ref4[2],
+            depth = _ref4[3];
 
-      for (var _len = arguments.length, data = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-        data[_key - 2] = arguments[_key];
-      }
-
-      if (this.listeners.hasOwnProperty(event)) {
-        this.listeners[event].forEach(function (func) {
-          return func.apply(void 0, [{
-            name: event,
-            data: data,
-            emitter: emitter,
-            room: _this2
-          }].concat(data));
-        });
-      }
+        var boxWidth = width * size.width;
+        var boxHeight = depth * size.depth;
+        var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+        var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+          color: 0x00ff00 + i * 0xff / 4
+        }));
+        wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
+        return wall;
+      });
+      walls.forEach(function (w) {
+        return group.add(w);
+      });
+    }
+  }, {
+    key: "draw",
+    value: function draw(scene) {
+      var group = new THREE.Group();
+      this.drawFloor(group);
+      this.drawWalls(group);
+      group.position.x = this.pos.x;
+      group.position.z = this.pos.z;
+      scene.add(group);
     } //* Player
 
   }, {
-    key: "mountPlayer",
-    value: function mountPlayer() {
-      this.playerEntered = true;
-      this.player.mount(this);
+    key: "enter",
+    value: function enter(player) {
+      this.player = player;
     }
   }, {
-    key: "unmountPlayer",
-    value: function unmountPlayer() {
-      this.playerEntered = false;
-    } //* Structure/layout
-
-  }, {
-    key: "connect",
-    value: function connect(rooms) {
-      this.connections = _objectSpread({}, this.connections, rooms);
+    key: "exit",
+    value: function exit() {
+      this.player = null;
     } //*
 
   }, {
@@ -35019,9 +35188,7 @@ function () {
   }, {
     key: "updatePlayer",
     value: function updatePlayer(dt) {
-      if (this.player && this.playerEntered) {
-        this.player.update(dt);
-      }
+      this.player && this.player.update(dt);
     }
   }, {
     key: "update",
@@ -35039,8 +35206,7 @@ function () {
     value: function deleteBullet(bullet) {
       this.scene.remove(bullet.bullet);
       bullet.bullet.geometry.dispose();
-      bullet.bullet.material.dispose(); // .dispose();
-
+      bullet.bullet.material.dispose();
       delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
     }
   }]);
@@ -35050,102 +35216,49 @@ function () {
 
 exports.Room = Room;
 
-var WaveRoom =
+var Level =
 /*#__PURE__*/
-function (_Room) {
-  _inherits(WaveRoom, _Room);
+function () {
+  function Level(_ref5) {
+    var min = _ref5.min,
+        max = _ref5.max;
 
-  function WaveRoom(scene, player, size, pos) {
-    var _this3;
+    _classCallCheck(this, Level);
 
-    _classCallCheck(this, WaveRoom);
-
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, scene, player, size, pos));
-    _this3.enemies = [];
-    _this3.raycaster = new THREE.Raycaster();
-    _this3.mouse = {
-      x: 0,
-      y: 0
-    };
-
-    _this3.generateWave();
-
-    return _this3;
+    this.rooms = [];
+    this.player = null;
+    this.halls = [];
+    this.min = min;
+    this.max = max;
   }
 
-  _createClass(WaveRoom, [{
-    key: "generateWave",
-    value: function generateWave() {
-      var _this4 = this;
-
-      this.enemies = Array(5).fill(0).map(function (a) {
-        return new _entity.Creature(_this4, _this4.scene, {
-          x: Math.random() * _this4.size.width + _this4.pos.x,
-          z: Math.random() * _this4.size.depth + _this4.pos.z
-        }, 2);
+  _createClass(Level, [{
+    key: "generate",
+    value: function generate() {
+      this.rooms.push([new WaveRoom(), [[new WaveRoom()], [new WaveRoom()], [new WaveRoom()]]]);
+    }
+  }, {
+    key: "add",
+    value: function add(player) {
+      this.player = player;
+    }
+  }, {
+    key: "draw",
+    value: function draw(scene) {
+      this.rooms.forEach(function (a) {
+        return a.draw(scene);
       });
-    }
-  }, {
-    key: "updateEnemies",
-    value: function updateEnemies(dt) {
-      var _this5 = this;
-
-      this.enemies.forEach(function (e) {
-        e.update(dt);
-
-        for (var i = 0; i < _this5.bullets.length; i++) {
-          var b = _this5.bullets[i];
-
-          if (b.collides(e)) {
-            _this5.deleteBullet(b);
-
-            _this5.deleteEnemy(e);
-
-            return;
-          }
-        }
+      this.halls.forEach(function (a) {
+        return a.draw(scene);
       });
+      this.player.draw(scene);
     }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      this.raycaster.setFromCamera(this.mouse, this.player.camera);
-      var i = this.raycaster.intersectObject(this.floor);
-
-      if (i.length > 0) {
-        var pt = i[0].point;
-        this.player.lookAt(pt);
-
-        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
-          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
-        }
-      }
-
-      this.updateBullets(dt);
-      this.updatePlayer(dt);
-      this.updateEnemies(dt);
-    }
-  }, {
-    key: "deleteEnemy",
-    value: function deleteEnemy(enemy) {
-      this.scene.remove(enemy.box);
-      enemy.box.geometry.dispose();
-      enemy.box.material.dispose();
-      delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
-    }
-  }, {
-    key: "mouseMove",
-    value: function mouseMove(evt) {
-      this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
-      this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
-    } // this.reset = []
-
   }]);
 
-  return WaveRoom;
-}(Room);
+  return Level;
+}();
 
-exports.WaveRoom = WaveRoom;
+exports.Level = Level;
 },{"seed-random":"../node_modules/seed-random/index.js","three":"../node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
 "use strict";
 
@@ -35178,20 +35291,12 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-//TODO:
-
-/*
-    - Draw Bullet
-    - Draw Melee
-    - Draw Ranged
-*/
 var Weapon =
 /*#__PURE__*/
 function () {
-  function Weapon(scene, name, damage, rate) {
+  function Weapon(name, damage, rate) {
     _classCallCheck(this, Weapon);
 
-    this.scene = scene;
     this.name = name;
     this.type = "weapon"; // this.mount(player);
 
@@ -35210,16 +35315,9 @@ function () {
   }
 
   _createClass(Weapon, [{
-    key: "mount",
-    value: function mount(player) {
+    key: "setOwner",
+    value: function setOwner(player) {
       this.player = player;
-      this.room = player.room;
-    }
-  }, {
-    key: "unmount",
-    value: function unmount() {
-      this.room = null;
-      this.player = null;
     }
   }, {
     key: "onTrigger",
@@ -35239,11 +35337,6 @@ function () {
         }, this.rate);
       }
     }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      if (this.triggering) this.trigger();
-    }
   }]);
 
   return Weapon;
@@ -35257,15 +35350,15 @@ var Bullet =
 function (_Entity) {
   _inherits(Bullet, _Entity);
 
-  function Bullet(scene, gun, pos, angle) {
+  function Bullet(gun) {
     var _this2;
 
-    var speed = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
-    var size = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
+    var speed = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
 
     _classCallCheck(this, Bullet);
 
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this, scene, pos, angle, size, speed));
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this));
     _this2.gun = gun;
     _this2.id = count++;
     _this2.room = _this2.gun.room;
@@ -35387,8 +35480,8 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
-//#region Setup
 var OrbitControls = (0, _threeOrbitControls.default)(THREE);
+//#region Setup
 var container = document.getElementById('canvas');
 var renderer = new THREE.WebGLRenderer({
   antialiased: true
@@ -35407,28 +35500,25 @@ var light = new THREE.AmbientLight(0x404040); // soft white light
 scene.add(light); //#endregion
 //#region Player
 
-var gun = new _weapon.RangedWeapon(scene, 'asdf', 2, 60, 1.5, 560);
-var player = new _entity.Player(scene, camera, {
+var gun = new _weapon.RangedWeapon('asdf', 2, 60, 1.5, 260);
+var player = new _entity.Player(camera, {
   x: 0,
   z: 0
 });
-var room = new _game.WaveRoom(scene, player, {
-  width: 100,
-  depth: 100
-}, {
-  x: -50,
-  z: -50
+var level = new Level({
+  min: 4,
+  max: 5
 });
-room.mountPlayer();
-player.mountWeapon(gun);
-gun.onTrigger(function (t, b) {
-  return room.addBullet(b);
-});
+player.enter(room1);
+player.equip(gun);
+level.add(player);
+level.draw(scene); //#region Controls
+
 controls.target = player.box.position;
 controls.update();
 controls.enableKeys = false;
-controls.enabled = false;
-controls.maxPolarAngle = Math.PI / 2;
+controls.enabled = false; // controls.maxPolarAngle = Math.PI / 2;
+
 controls.minDistance = 10;
 controls.maxDistance = 200; // controls.minAzimuthAngle = Math.PI;
 // controls.maxAzimuthAngle = 2 * Math.PI;
@@ -35441,34 +35531,40 @@ animate();
 onWindowResize();
 document.body.addEventListener('keydown', function (evt) {
   if (evt.key === 'Control') controls.enabled = true;
-  room.keyDown(evt);
+  room1.keyDown(evt);
+  room2.keyDown(evt);
 });
 document.body.addEventListener('keyup', function (evt) {
   if (evt.key === 'Control') controls.enabled = false;
-  room.keyUp(evt);
+  room1.keyUp(evt);
+  room2.keyUp(evt);
 }); // document.body.addEventListener('keyreleased', function (evt) {
 //     if (evt.key === 'Control') controls.enabled = false;
-//     room.keyUp(evt);
+//     room1.keyUp(evt);
 // });
 
 document.body.addEventListener('mousemove', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room.mouseMove(evt);
+  room1.mouseMove(evt);
+  room2.mouseMove(evt);
 });
 document.body.addEventListener('mousedown', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room.mouseDown(evt);
+  room1.mouseDown(evt);
+  room2.mouseDown(evt);
 });
 document.body.addEventListener('mouseup', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room.mouseUp(evt);
+  room1.mouseUp(evt);
+  room2.mouseUp(evt);
 }); //#endregion
 
 function animate() {
   requestAnimationFrame(animate);
   var current = +new Date();
   var dt = (current - prev) / 1000;
-  room.update(dt);
+  room1.update(dt);
+  room2.update(dt);
   controls.update();
   prev = current;
   renderer.render(scene, camera);
@@ -35506,7 +35602,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55748" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59964" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import OrbitControlConstructor from 'three-orbit-controls';
+let OrbitControls = OrbitControlConstructor(THREE);
+
+
 import {
-    Room,
+    Hall,
     WaveRoom
 } from './game.js';
 import {
@@ -12,8 +15,6 @@ import {
 } from './weapon.js'
 
 //#region Setup
-let OrbitControls = OrbitControlConstructor(THREE);
-
 let container = document.getElementById('canvas');
 let renderer = new THREE.WebGLRenderer({
     antialiased: true,
@@ -21,14 +22,13 @@ let renderer = new THREE.WebGLRenderer({
 
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(50, 16 / 9, 1, 1000);
-camera.position.set(0, 40, -80);
 
+camera.position.set(0, 40, -80);
 let controls = new OrbitControls(camera);
 camera.controls = controls;
 //#endregion
 
 //#region Misc
-
 let start = performance.now();
 let prev = performance.now();
 
@@ -37,29 +37,28 @@ scene.add(light);
 //#endregion
 
 //#region Player
-let gun = new RangedWeapon(scene, 'asdf', 2, 60, 1.5, 560);
-let player = new Player(scene, camera, {
+let gun = new RangedWeapon('asdf', 2, 60, 1.5, 260);
+let player = new Player(camera, {
     x: 0,
     z: 0
 });
-let room = new WaveRoom(scene, player, {
-    width: 100,
-    depth: 100,
-}, {
-    x: -50,
-    z: -50
+let level = new Level({
+    min: 4,
+    max: 5,
 });
-room.mountPlayer();
-player.mountWeapon(gun);
-gun.onTrigger((t, b) => room.addBullet(b));
 
+player.enter(room1);
+player.equip(gun);
+level.add(player);
+level.draw(scene);
 
+//#region Controls
 controls.target = player.box.position;
 controls.update();
 
 controls.enableKeys = false;
 controls.enabled = false;
-controls.maxPolarAngle = Math.PI / 2;
+// controls.maxPolarAngle = Math.PI / 2;
 controls.minDistance = 10;
 controls.maxDistance = 200;
 
@@ -76,27 +75,32 @@ onWindowResize();
 
 document.body.addEventListener('keydown', function (evt) {
     if (evt.key === 'Control') controls.enabled = true;
-    room.keyDown(evt);
+    room1.keyDown(evt);
+    room2.keyDown(evt);
 });
 document.body.addEventListener('keyup', function (evt) {
     if (evt.key === 'Control') controls.enabled = false;
-    room.keyUp(evt);
+    room1.keyUp(evt);
+    room2.keyUp(evt);
 });
 // document.body.addEventListener('keyreleased', function (evt) {
 //     if (evt.key === 'Control') controls.enabled = false;
-//     room.keyUp(evt);
+//     room1.keyUp(evt);
 // });
 document.body.addEventListener('mousemove', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room.mouseMove(evt);
+    room1.mouseMove(evt);
+    room2.mouseMove(evt);
 });
 document.body.addEventListener('mousedown', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room.mouseDown(evt);
+    room1.mouseDown(evt);
+    room2.mouseDown(evt);
 });
 document.body.addEventListener('mouseup', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room.mouseUp(evt);
+    room1.mouseUp(evt);
+    room2.mouseUp(evt);
 });
 //#endregion
 
@@ -107,7 +111,8 @@ function animate() {
     let current = +new Date;
     let dt = (current - prev) / 1000;
 
-    room.update(dt);
+    room1.update(dt);
+    room2.update(dt);
     controls.update();
 
     prev = current;

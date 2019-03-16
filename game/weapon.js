@@ -3,16 +3,8 @@ import {
 } from "./entity.js";
 import * as THREE from 'three';
 
-//TODO:
-/*
-    - Draw Bullet
-    - Draw Melee
-    - Draw Ranged
-*/
-
 export class Weapon {
-    constructor(scene, name, damage, rate) {
-        this.scene = scene;
+    constructor(name, damage, rate) {
         this.name = name;
         this.type = "weapon";
 
@@ -31,15 +23,10 @@ export class Weapon {
         this.modifiers = [];
     }
 
-    mount(player) {
+    setOwner(player) {
         this.player = player;
-        this.room = player.room;
     }
 
-    unmount() {
-        this.room = null;
-        this.player = null;
-    }
 
     onTrigger(cb) {
         this.triggerListener = cb;
@@ -54,15 +41,11 @@ export class Weapon {
             }, this.rate);
         }
     }
-
-    update(dt) {
-        if (this.triggering) this.trigger();
-    }
 }
 let count = 0;
 export class Bullet extends Entity {
-    constructor(scene, gun, pos, angle, speed = 1, size = 1) {
-        super(scene, pos, angle, size, speed);
+    constructor(gun, speed = 1, size = 1) {
+        super();
         this.gun = gun;
         this.id = count++;
         this.room = this.gun.room;
