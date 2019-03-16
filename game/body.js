@@ -22,6 +22,10 @@ class Body extends Entity {
     this.triggering = false;
   }
 
+  initGeometry(){
+    return torso.initGeometry();
+  }
+
   takeBullet(bullet) {
     let damageDealt = torso.takeBullet(bullet);
     this.takeDamage(damageDealt);
