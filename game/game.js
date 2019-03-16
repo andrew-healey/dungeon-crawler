@@ -10,78 +10,74 @@ import {
 
 
 export class Hall {
-    constructor(scene, player, size = 5, from, to, vertical) {
+    constructor(size = 5, from, to) {
+        let vertical = from.pos.z !== to.pos.z;
+
+        this.drawn = false;
+        this.vertical = vertical;
         this.from = from;
         this.to = to;
-        this.to.connect(this, from);
-        this.from.connect(this, to);
 
-        let fromTop = vertical ? from.pos.z > to.pos.z : from.pos.x > to.pos.y;
-        let x, z, width, depth;
-        if (vertical) {
-            width = size;
-            x = from.size.width / 2 + from.pos.x;
-            if (fromTop) {
-                z = from.pos.z - from.size.depth;
-                depth = z - to.size.depth;
-            } else {
-                z = to.pos.z - to.size.depth;
-                depth = z - from.size.depth;
-            }
-        } else {
-            depth = size;
-            z = from.size.depth / 2 + from.pos.z;
-            if (fromTop) {
-                x = from.pos.x - from.size.width - 10;
-                width = Math.abs(x - to.size.width);
-            } else {
-                x = to.pos.x - to.size.width - 10;
-                width = Math.abs(x - from.size.width);
-            }
+        this.pos = vertical ? {
+            x: from.pos.x + from.size.width / 2 - size / 2,
+            z: from.pos.z + from.size.depth,
+        } : {
+            x: from.pos.x + from.size.width,
+            z: from.pos.z + from.size.depth / 2 - size / 2,
         }
-        this.pos = {
-            x,
-            z
-        };
-        this.size = {
-            width,
-            depth
-        };
+        this.size = vertical ? {
+            x: size,
+            z: to.pos.z - from.pos.z - from.size.z,
+        } : {
+            x: to.pos.x - from.pos.x - from.size.x,
+            z: size,
+        }
+    }
 
-
+    drawFloor(group) {
         this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
-            color: 0x888888,
+            color: 0x555555,
             side: THREE.DoubleSide
         }));
         this.floor.rotateX(Math.PI / 2);
         this.floor.position.y = -2;
         this.floor.position.x = -this.pos.x;
         this.floor.position.z = -this.pos.z;
-
-        this.walls = new THREE.Group();
-        this.walls.add(this.floor);
-
-        let walls = (vertical ? [
-            [0, 1, 1, 0],
+        group.add(this.floor)
+    }
+    drawWalls(group) {
+        let walls = (!this.vertical ? [
             [0, 0, 1, 0],
+            [0, 1, 1, 0],
         ] : [
-            [0, 0, 0, 1],
+            [0, 0, 0, 1]
             [1, 0, 0, 1],
         ]).map(([x, z, width, depth], i) => {
-            let boxWidth = width * size.width;
-            let boxHeight = depth * size.depth;
+            let boxWidth = width * this.size.width;
+            let boxHeight = depth * this.size.depth;
             let geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
             let wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-                color: 0x00ff00 + (i * 0xff / 2),
+                color: 0x00ff00 + (i * 0xff / 4),
             }));
-            wall.position.set(x * size.width + boxWidth / 2 + (z * boxHeight), 0, z * size.depth + boxHeight / 2 + (x * boxWidth));
+            wall.position.set(x * this.size.width + boxWidth / 2 + (z * boxHeight), 0, z * this.size.depth + boxHeight / 2 + (x * boxWidth));
             return wall;
         });
-        walls.forEach(w => this.walls.add(w));
-        scene.add(this.walls);
+        walls.forEach(w => group.add(w))
+    }
+    draw(scene) {
+        if (!this.drawn) {
+            this.drawn = true;
+            let group = new THREE.Group();
+            this.drawFloor(group);
+            this.drawWalls(group);
 
-        this.walls.position.x = this.pos.x;
-        this.walls.position.z = this.pos.z;
+            group.position.x = this.pos.x;
+            group.position.z = this.pos.z;
+
+            scene.add(group);
+            // this.scene = scene;
+        }
+        console.log(this);
     }
 }
 export class Room {
@@ -93,18 +89,23 @@ export class Room {
         this.activated = true;
         this.unlocked = true;
 
-        this.connections = {
-            'n': null,
-            's': null,
-            'e': null,
-            'w': null
-        };
-
         this.listeners = {};
         this.player = null;
 
         this.pos = pos;
         this.size = size;
+        this.connections = {
+            n: null,
+            s: null,
+            e: null,
+            w: null,
+        };
+        this.hallways = {
+            n: null,
+            s: null,
+            e: null,
+            w: null
+        };
     }
 
     drawFloor(group) {
@@ -204,6 +205,11 @@ export class Room {
         bullet.geom.geometry.dispose();
         bullet.geom.material.dispose();
         delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
+    }
+
+    connect(side, room, hallway) {
+        this.connections[side] = room;
+        this.halls[side] = hallway;
     }
 
 }
@@ -328,14 +334,26 @@ export class Level {
 
     }
 
+
     generate() {
+
+        let step = 100 + 20;
+        let stack = [];
+        // let start = Array(width, )
         this.rooms = [new WaveRoom(1, {
             width: 100,
             depth: 100
         }, {
             x: -50,
             z: -50
+        }), new WaveRoom(1, {
+            width: 100,
+            depth: 100
+        }, {
+            x: -50,
+            z: 60
         })];
+        this.halls = [new Hall(10, this.rooms[0], this.rooms[1])]
         this.currentRoom = this.rooms[0];
         if (this.player) this.currentRoom.player = this.player;
         this.player.enter(this.rooms[0]);

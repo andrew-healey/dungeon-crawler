@@ -34268,17 +34268,37 @@ function () {
       x: 0,
       z: 0
     };
+    this.acc = {
+      x: 0,
+      y: 0
+    };
     this.angle = angle;
     this.size = size;
     this.speed = speed;
     this.angleComponents = angleComponents;
     this.health = health;
+    this.totalHealth = health;
   }
 
   _createClass(Entity, [{
+    key: "animate",
+    value: function animate(duration, timing, func, cb) {
+      var start = +new Date();
+
+      var a = function a() {
+        var at = +new Date() - start;
+        if (at >= duration) return (cb || function () {})(duration);
+        func(timing(at / duration));
+        requestAnimationFrame(a);
+      };
+
+      a();
+    }
+  }, {
     key: "takeDamage",
     value: function takeDamage(damage) {
       this.health -= damage;
+      var pgeommaterialcolor = this.geom.material.color;
       if (this.health <= 0) this.die();
     }
   }, {
@@ -34462,7 +34482,7 @@ function (_Entity) {
       this.camera.controls.update();
       setInterval(function () {
         _this3.boxes.forEach(function (b) {
-          console.log(b);
+          // console.log(b);
           b.rotation.x += (Math.random() - 0.5) / 20;
           b.rotation.y += Math.random() - 0.5;
           b.rotation.z += Math.random() - 0.5;
@@ -34511,7 +34531,7 @@ function (_Entity) {
           return _this4.room.addBullet(b);
         },
         'melee': function melee() {
-          return _this4.room.emit('melee');
+          return _this4.room.melee(b);
         }
       })[t]();
     }
@@ -34744,10 +34764,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -34758,92 +34774,102 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
 // import {
 //     Player
 // } from './'
 // export RangedWeapon;
-var Hall = function Hall(scene, player) {
-  var _this = this;
+var Hall =
+/*#__PURE__*/
+function () {
+  function Hall() {
+    var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 5;
+    var from = arguments.length > 1 ? arguments[1] : undefined;
+    var to = arguments.length > 2 ? arguments[2] : undefined;
 
-  var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
-  var from = arguments.length > 3 ? arguments[3] : undefined;
-  var to = arguments.length > 4 ? arguments[4] : undefined;
-  var vertical = arguments.length > 5 ? arguments[5] : undefined;
+    _classCallCheck(this, Hall);
 
-  _classCallCheck(this, Hall);
-
-  this.from = from;
-  this.to = to;
-  this.to.connect(this, from);
-  this.from.connect(this, to);
-  var fromTop = vertical ? from.pos.z > to.pos.z : from.pos.x > to.pos.y;
-  var x, z, width, depth;
-
-  if (vertical) {
-    width = size;
-    x = from.size.width / 2 + from.pos.x;
-
-    if (fromTop) {
-      z = from.pos.z - from.size.depth;
-      depth = z - to.size.depth;
-    } else {
-      z = to.pos.z - to.size.depth;
-      depth = z - from.size.depth;
-    }
-  } else {
-    depth = size;
-    z = from.size.depth / 2 + from.pos.z;
-
-    if (fromTop) {
-      x = from.pos.x - from.size.width - 10;
-      width = Math.abs(x - to.size.width);
-    } else {
-      x = to.pos.x - to.size.width - 10;
-      width = Math.abs(x - from.size.width);
-    }
+    var vertical = from.pos.z !== to.pos.z;
+    this.drawn = false;
+    this.vertical = vertical;
+    this.from = from;
+    this.to = to;
+    this.pos = vertical ? {
+      x: from.pos.x + from.size.width / 2 - size / 2,
+      z: from.pos.z + from.size.depth
+    } : {
+      x: from.pos.x + from.size.width,
+      z: from.pos.z + from.size.depth / 2 - size / 2
+    };
+    this.size = vertical ? {
+      x: size,
+      z: to.pos.z - from.pos.z - from.size.z
+    } : {
+      x: to.pos.x - from.pos.x - from.size.x,
+      z: size
+    };
   }
 
-  this.pos = {
-    x: x,
-    z: z
-  };
-  this.size = {
-    width: width,
-    depth: depth
-  };
-  this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
-    color: 0x888888,
-    side: THREE.DoubleSide
-  }));
-  this.floor.rotateX(Math.PI / 2);
-  this.floor.position.y = -2;
-  this.floor.position.x = -this.pos.x;
-  this.floor.position.z = -this.pos.z;
-  this.walls = new THREE.Group();
-  this.walls.add(this.floor);
-  var walls = (vertical ? [[0, 1, 1, 0], [0, 0, 1, 0]] : [[0, 0, 0, 1], [1, 0, 0, 1]]).map(function (_ref, i) {
-    var _ref2 = _slicedToArray(_ref, 4),
-        x = _ref2[0],
-        z = _ref2[1],
-        width = _ref2[2],
-        depth = _ref2[3];
+  _createClass(Hall, [{
+    key: "drawFloor",
+    value: function drawFloor(group) {
+      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
+        color: 0x555555,
+        side: THREE.DoubleSide
+      }));
+      this.floor.rotateX(Math.PI / 2);
+      this.floor.position.y = -2;
+      this.floor.position.x = -this.pos.x;
+      this.floor.position.z = -this.pos.z;
+      group.add(this.floor);
+    }
+  }, {
+    key: "drawWalls",
+    value: function drawWalls(group) {
+      var _this = this;
 
-    var boxWidth = width * size.width;
-    var boxHeight = depth * size.depth;
-    var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
-    var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-      color: 0x00ff00 + i * 0xff / 2
-    }));
-    wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
-    return wall;
-  });
-  walls.forEach(function (w) {
-    return _this.walls.add(w);
-  });
-  scene.add(this.walls);
-  this.walls.position.x = this.pos.x;
-  this.walls.position.z = this.pos.z;
-};
+      var walls = (!this.vertical ? [[0, 0, 1, 0], [0, 1, 1, 0]] : [[0, 0, 0, 1][(1, 0, 0, 1)]]).map(function (_ref, i) {
+        var _ref2 = _slicedToArray(_ref, 4),
+            x = _ref2[0],
+            z = _ref2[1],
+            width = _ref2[2],
+            depth = _ref2[3];
+
+        var boxWidth = width * _this.size.width;
+        var boxHeight = depth * _this.size.depth;
+        var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+        var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+          color: 0x00ff00 + i * 0xff / 4
+        }));
+        wall.position.set(x * _this.size.width + boxWidth / 2 + z * boxHeight, 0, z * _this.size.depth + boxHeight / 2 + x * boxWidth);
+        return wall;
+      });
+      walls.forEach(function (w) {
+        return group.add(w);
+      });
+    }
+  }, {
+    key: "draw",
+    value: function draw(scene) {
+      if (!this.drawn) {
+        this.drawn = true;
+        var group = new THREE.Group();
+        this.drawFloor(group);
+        this.drawWalls(group);
+        group.position.x = this.pos.x;
+        group.position.z = this.pos.z;
+        scene.add(group); // this.scene = scene;
+      }
+
+      console.log(this);
+    }
+  }]);
+
+  return Hall;
+}();
 
 exports.Hall = Hall;
 
@@ -34857,16 +34883,22 @@ function () {
     this.bullets = [];
     this.activated = true;
     this.unlocked = true;
-    this.connections = {
-      'n': null,
-      's': null,
-      'e': null,
-      'w': null
-    };
     this.listeners = {};
     this.player = null;
     this.pos = pos;
     this.size = size;
+    this.connections = {
+      n: null,
+      s: null,
+      e: null,
+      w: null
+    };
+    this.hallways = {
+      n: null,
+      s: null,
+      e: null,
+      w: null
+    };
   }
 
   _createClass(Room, [{
@@ -34998,6 +35030,12 @@ function () {
       bullet.geom.geometry.dispose();
       bullet.geom.material.dispose();
       delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
+    }
+  }, {
+    key: "connect",
+    value: function connect(side, room, hallway) {
+      this.connections[side] = room;
+      this.halls[side] = hallway;
     }
   }]);
 
@@ -35162,13 +35200,23 @@ function () {
   _createClass(Level, [{
     key: "generate",
     value: function generate() {
+      var step = 100 + 20;
+      var stack = []; // let start = Array(width, )
+
       this.rooms = [new WaveRoom(1, {
         width: 100,
         depth: 100
       }, {
         x: -50,
         z: -50
+      }), new WaveRoom(1, {
+        width: 100,
+        depth: 100
+      }, {
+        x: -50,
+        z: 60
       })];
+      this.halls = [new Hall(10, this.rooms[0], this.rooms[1])];
       this.currentRoom = this.rooms[0];
       if (this.player) this.currentRoom.player = this.player;
       this.player.enter(this.rooms[0]);
@@ -35456,7 +35504,7 @@ var light = new THREE.AmbientLight(0x404040); // soft white light
 scene.add(light); //#endregion
 //#region Player
 
-var gun = new _weapon.RangedWeapon('asdf', 2, 60, 7.5, 260);
+var gun = new _weapon.RangedWeapon('asdf', 1, 200, 7.5, 260);
 var sword = new _weapon.MeleeWeapon('asdf2', 10, 2 * Math.PI, 20, 100);
 var player = new _entity.Player(camera, {
   x: 0,
@@ -35467,8 +35515,8 @@ var level = new _game.Level({
   max: 5
 }); // player.enter(room1);
 
-player.equip(gun);
 player.equip(sword);
+player.equip(gun);
 level.add(player);
 level.generate();
 level.draw(scene);

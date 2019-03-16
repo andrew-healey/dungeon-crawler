@@ -20,15 +20,32 @@ export class Entity {
             x: 0,
             z: 0
         };
+        this.acc = {
+            x: 0,
+            y: 0,
+        };
         this.angle = angle;
         this.size = size;
         this.speed = speed;
         this.angleComponents = angleComponents;
         this.health = health;
+        this.totalHealth = health;
+    }
+
+    animate(duration, timing, func, cb) {
+        let start = +new Date;
+        let a = () => {
+            let at = +new Date - start;
+            if (at >= duration) return (cb || (() => {}))(duration);
+            func(timing(at / duration));
+            requestAnimationFrame(a);
+        }
+        a();
     }
 
     takeDamage(damage) {
         this.health -= damage;
+        let pgeommaterialcolor = this.geom.material.color
         if (this.health <= 0) this.die();
     }
 
@@ -146,7 +163,7 @@ export class Player extends Entity {
     }
 
     initGeometry() {
-      /*this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+        this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
             color: 0xffffff,
         }));
         this.boxes = Array(3).fill(0).map(a => new THREE.Mesh(
@@ -167,7 +184,7 @@ export class Player extends Entity {
 
         setInterval(() => {
             this.boxes.forEach(b => {
-                console.log(b);
+                // console.log(b);
                 b.rotation.x += (Math.random() - 0.5) / 20;
                 b.rotation.y += (Math.random() - 0.5);
                 b.rotation.z += (Math.random() - 0.5);
@@ -184,7 +201,7 @@ export class Player extends Entity {
         //     color: 0xAAFFAA
         // }));
         // scene.add(this.debugger);
-        */
+
 
 
         return this.group;
