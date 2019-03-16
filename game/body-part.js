@@ -40,7 +40,6 @@ class BodyPart extends Entity {
         x: sword.position.x - this.position.x,
         z: sword.position.z - this.position.z
       };
-      //TODO
       let newSword = new Entity(modifiedSwordOrigin);
       currDamage += child.takeSlash(newSword, rotation, damage);
     }
