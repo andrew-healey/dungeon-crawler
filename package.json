@@ -1,0 +1,31 @@
+{
+  "name": "dungeon-crawler",
+  "version": "0.0.0",
+  "description": "A 3D dungeon crawler that uses procedurally generated rooms and enemies.",
+  "main": "index.js",
+  "scripts": {
+    "test": "parcel index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sesamestrong/dungeon-crawler.git"
+  },
+  "keywords": [
+    "game",
+    "threejs",
+    "three",
+    "javascript",
+    "html",
+    "css",
+    "3d"
+  ],
+  "author": "Andrew Healey and Aaron Chyatte",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sesamestrong/dungeon-crawler/issues"
+  },
+  "homepage": "https://github.com/Sesamestrong/dungeon-crawler#readme",
+  "dependencies": {
+    "npm": "^6.9.0"
+  }
+}
