@@ -43,10 +43,11 @@ export class Weapon {
 
 }
 export class Bullet extends Entity {
-    constructor(gun, pos, angle, size = 1, speed = 1, ) {
+    constructor(gun, pos, angle, size = 1, speed = 1, damage = gun.damage) {
         super(pos, angle, size, speed);
         this.gun = gun;
         this.room = this.gun.room;
+        this.damage = damage;
     }
 
     initGeometry() {

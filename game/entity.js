@@ -12,7 +12,7 @@ export class Entity {
      * @param angleComponents {Object {... {Number}}} - The individual components of the angle, which are summed to find the net angle.
      * @todo Add a y coordinate that defaults to 0
      */
-    constructor(pos, angle, size, speed, angleComponents = {}) {
+    constructor(pos, angle, size, speed, angleComponents = {}, health) {
         this.room = null;
 
         this.pos = pos;
@@ -24,7 +24,15 @@ export class Entity {
         this.size = size;
         this.speed = speed;
         this.angleComponents = angleComponents;
+        this.health = health;
     }
+
+    takeDamage(damage) {
+        this.health -= damage;
+        if (this.health <= 0) this.die();
+    }
+
+    die() {}
 
     rotateComponent(changeObj) {
         return Object.assign(this.angleComponents, changeObj);
@@ -254,7 +262,7 @@ export class Player extends Entity {
 }
 export class Creature extends Entity {
     constructor(room, pos, size) {
-        super(pos, Math.random() * Math.PI * 2, size, 20);
+        super(pos, Math.random() * Math.PI * 2, size, 20, [], 10);
         this.room = room;
     }
 
@@ -300,5 +308,10 @@ export class Creature extends Entity {
         }
 
         this.updateMeshPosition();
+    }
+
+    die() {
+        this.room.deleteEnemy(this);
+        delete this;
     }
 }

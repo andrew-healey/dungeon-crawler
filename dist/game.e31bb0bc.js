@@ -34258,6 +34258,7 @@ function () {
    */
   function Entity(pos, angle, size, speed) {
     var angleComponents = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    var health = arguments.length > 5 ? arguments[5] : undefined;
 
     _classCallCheck(this, Entity);
 
@@ -34271,9 +34272,19 @@ function () {
     this.size = size;
     this.speed = speed;
     this.angleComponents = angleComponents;
+    this.health = health;
   }
 
   _createClass(Entity, [{
+    key: "takeDamage",
+    value: function takeDamage(damage) {
+      this.health -= damage;
+      if (this.health <= 0) this.die();
+    }
+  }, {
+    key: "die",
+    value: function die() {}
+  }, {
     key: "rotateComponent",
     value: function rotateComponent(changeObj) {
       return Object.assign(this.angleComponents, changeObj);
@@ -34613,7 +34624,7 @@ function (_Entity2) {
 
     _classCallCheck(this, Creature);
 
-    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20));
+    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20, [], 10));
     _this6.room = room;
     return _this6;
   }
@@ -34670,6 +34681,12 @@ function (_Entity2) {
       }
 
       this.updateMeshPosition();
+    }
+  }, {
+    key: "die",
+    value: function die() {
+      this.room.deleteEnemy(this);
+      delete this;
     }
   }]);
 
@@ -34929,7 +34946,7 @@ function () {
           var e = _this3.enemies[i];
 
           if (b.collides(e)) {
-            e.applyDamage(b.damage);
+            e.takeDamage(b.damage);
           }
         }
       });
@@ -34955,9 +34972,9 @@ function () {
   }, {
     key: "deleteBullet",
     value: function deleteBullet(bullet) {
-      this.scene.remove(bullet.bullet);
-      bullet.bullet.geometry.dispose();
-      bullet.bullet.material.dispose();
+      this.scene.remove(bullet.geom);
+      bullet.geom.geometry.dispose();
+      bullet.geom.material.dispose();
       delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
     }
   }]);
@@ -35030,7 +35047,7 @@ function (_Room) {
           if (b.collides(e)) {
             _this6.deleteBullet(b);
 
-            _this6.deleteEnemy(e);
+            e.takeDamage(b.damage); // this.deleteEnemy(e);
 
             return;
           }
@@ -35057,9 +35074,10 @@ function (_Room) {
   }, {
     key: "deleteEnemy",
     value: function deleteEnemy(enemy) {
-      this.scene.remove(enemy.box);
-      enemy.box.geometry.dispose();
-      enemy.box.material.dispose();
+      console.log(enemy);
+      this.scene.remove(enemy.geom);
+      enemy.geom.geometry.dispose();
+      enemy.geom.material.dispose();
       delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
     }
   }, {
@@ -35260,12 +35278,14 @@ function (_Entity) {
 
     var size = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
     var speed = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
+    var damage = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : gun.damage;
 
     _classCallCheck(this, Bullet);
 
     _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this, pos, angle, size, speed));
     _this2.gun = gun;
     _this2.room = _this2.gun.room;
+    _this2.damage = damage;
     return _this2;
   }
 
@@ -35387,7 +35407,7 @@ var light = new THREE.AmbientLight(0x404040); // soft white light
 scene.add(light); //#endregion
 //#region Player
 
-var gun = new _weapon.RangedWeapon('asdf', 2, 60, 1.5, 260);
+var gun = new _weapon.RangedWeapon('asdf', 2, 60, 7.5, 260);
 var player = new _entity.Player(camera, {
   x: 0,
   z: 0
@@ -35485,7 +35505,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58455" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63338" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

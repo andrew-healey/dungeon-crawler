@@ -38,7 +38,7 @@ scene.add(light);
 //#endregion
 
 //#region Player
-let gun = new RangedWeapon('asdf', 2, 60, 1.5, 260);
+let gun = new RangedWeapon('asdf', 2, 60, 7.5, 260);
 let player = new Player(camera, {
     x: 0,
     z: 0

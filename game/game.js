@@ -183,7 +183,7 @@ export class Room {
             for (let i = 0; i < this.enemies.length; i++) {
                 let e = this.enemies[i];
                 if (b.collides(e)) {
-                    e.applyDamage(b.damage)
+                    e.takeDamage(b.damage);
                 }
             }
         });
@@ -202,9 +202,9 @@ export class Room {
         bullet.draw(this.scene);
     }
     deleteBullet(bullet) {
-        this.scene.remove(bullet.bullet);
-        bullet.bullet.geometry.dispose();
-        bullet.bullet.material.dispose();
+        this.scene.remove(bullet.geom);
+        bullet.geom.geometry.dispose();
+        bullet.geom.material.dispose();
         delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
     }
 
@@ -252,7 +252,8 @@ export class WaveRoom extends Room {
                 let b = this.bullets[i];
                 if (b.collides(e)) {
                     this.deleteBullet(b);
-                    this.deleteEnemy(e);
+                    e.takeDamage(b.damage);
+                    // this.deleteEnemy(e);
                     return;
                 }
             }
@@ -276,9 +277,10 @@ export class WaveRoom extends Room {
     }
 
     deleteEnemy(enemy) {
-        this.scene.remove(enemy.box);
-        enemy.box.geometry.dispose();
-        enemy.box.material.dispose();
+        console.log(enemy);
+        this.scene.remove(enemy.geom);
+        enemy.geom.geometry.dispose();
+        enemy.geom.material.dispose();
         delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
     }
 
