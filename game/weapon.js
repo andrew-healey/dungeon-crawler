@@ -45,6 +45,7 @@ export class Weapon {
 let count = 0;
 export class Bullet extends Entity {
     constructor(gun, speed = 1, size = 1) {
+        console.log(gun)
         super();
         this.gun = gun;
         this.id = count++;
@@ -72,9 +73,10 @@ export class RangedWeapon extends Weapon {
     }
 
     triggerCB() {
+        console.log(this)
         this.triggerListener(
             "ranged",
-            new Bullet(this.scene, this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSpeed, this.bulletSize)
+            new Bullet(this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSpeed, this.bulletSize)
         );
     }
 }

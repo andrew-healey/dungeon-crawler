@@ -18,7 +18,7 @@ import {
 //#region Setup
 let container = document.getElementById('canvas');
 let renderer = new THREE.WebGLRenderer({
-    antialiased: true,
+    antialias: true,
 });
 
 let scene = new THREE.Scene();

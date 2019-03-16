@@ -91,7 +91,7 @@ export class Room {
 
         this.bullets = [];
 
-        this.activated = false;
+        this.activated = true;
         this.unlocked = true;
 
         this.connections = {
@@ -117,7 +117,8 @@ export class Room {
         this.floor.position.y = -2;
         this.floor.position.x = -this.pos.x;
         this.floor.position.z = -this.pos.z;
-        group.add(this.floor);
+        group.add(this.floor)
+        console.log(group);
     }
     drawWalls(group) {
         let walls = [
@@ -135,7 +136,8 @@ export class Room {
             wall.position.set(x * this.size.width + boxWidth / 2 + (z * boxHeight), 0, z * this.size.depth + boxHeight / 2 + (x * boxWidth));
             return wall;
         });
-        walls.forEach(w => group.add(w));
+        walls.forEach(w => group.add(w))
+        console.log(group);
     }
     draw(scene) {
         let group = new THREE.Group();
@@ -144,6 +146,7 @@ export class Room {
 
         group.position.x = this.pos.x;
         group.position.z = this.pos.z;
+        console.log(group);
 
         scene.add(group);
     }
@@ -275,7 +278,6 @@ export class Level {
 
         this.min = min;
         this.max = max;
-
     }
 
     generate() {
@@ -284,30 +286,8 @@ export class Level {
             depth: 100
         }, {
             x: -50,
-            y: -50
-        }), [
-            // [new WaveRoom(1, {
-            //     width: 100,
-            //     depth: 100
-            // }, {
-            //     x: -50,
-            //     y: -50
-            // })],
-            // [new WaveRoom(1, {
-            //     width: 100,
-            //     depth: 100
-            // }, {
-            //     x: -50,
-            //     y: -50
-            // })],
-            // [new WaveRoom(1, {
-            //     width: 100,
-            //     depth: 100
-            // }, {
-            //     x: -50,
-            //     y: -50
-            // })]
-        ]];
+            z: -50
+        }), []];
     }
 
     add(player) {
@@ -315,9 +295,7 @@ export class Level {
     }
 
     draw(scene) {
-        console.log(this.rooms);
         let drawRoom = ([room, neighbors]) => {
-            console.log(room);
             room.draw(scene);
             (neighbors || []).map(drawRoom);
         }
@@ -327,8 +305,8 @@ export class Level {
         this.player.draw(scene);
     }
 
-    update() {
-        this.player.update();
+    update(dt) {
+        this.player.update(dt);
     }
 
     keyDown(evt) {

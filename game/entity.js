@@ -10,7 +10,6 @@ export class Entity {
         z: 0
     }, angle = 0, size = 1, speed = 1) {
         this.room = null;
-
         this.pos = pos;
         this.vel = {
             x: 0,
@@ -19,6 +18,7 @@ export class Entity {
         this.angle = angle;
         this.size = size;
         this.speed = speed;
+        console.log(this)
     }
 
     draw(scene) {
@@ -28,6 +28,7 @@ export class Entity {
             this.geom.rotation.y = -this.angle;
             scene.add(this.geom);
         }
+        console.log(this);
     }
 
     enter(room) {
@@ -130,15 +131,23 @@ export class Player extends Entity {
     }
 
     initGeometry() {
+        this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+        }));
         this.box = new THREE.Mesh(
             new THREE.BoxGeometry(this.size, this.size, this.size),
             new THREE.MeshBasicMaterial({
                 wireframe: true,
                 color: 0xffffff
             }));
-        this.camera.lookAt(this.box.position);
+        this.group = new THREE.Group();
+        this.group.add(this.core);
+        this.group.add(this.box);
+        // this.group.position.set(0, 0, 0);
+
+        this.camera.controls.target = this.group.position;
         this.camera.controls.update();
-        return this.box;
+        return this.group;
     }
 
     equip(weapon) {
@@ -217,7 +226,7 @@ export class Player extends Entity {
         })[key] || (() => 1))();
     }
     mouseDown(evt) {
-        this.weapon.length >= 1 && this.trigger(true)
+        this.weapons.length >= 1 && this.trigger(true)
     }
 
     mouseUp(evt) {
@@ -250,6 +259,7 @@ export class Creature extends Entity {
                 a.x = -a.x;
                 this.lookAt(a);
             }
+
             if (this.pos.z > this.room.pos.z + this.room.size.depth - 3) {
                 this.pos.z = this.room.pos.z + this.room.size.depth - 3;
                 let a = this.unit();

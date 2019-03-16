@@ -34425,13 +34425,20 @@ function (_Entity) {
   _createClass(Player, [{
     key: "initGeometry",
     value: function initGeometry() {
+      this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+        color: 0xffffff
+      }));
       this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
         wireframe: true,
         color: 0xffffff
       }));
-      this.camera.lookAt(this.box.position);
+      this.group = new THREE.Group();
+      this.group.add(this.core);
+      this.group.add(this.box); // this.group.position.set(0, 0, 0);
+
+      this.camera.controls.target = this.group.position;
       this.camera.controls.update();
-      return this.box;
+      return this.group;
     }
   }, {
     key: "equip",
@@ -34851,9 +34858,6 @@ function () {
   }, {
     key: "draw",
     value: function draw(scene) {
-      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
-        color: 0xffffff
-      })));
       var group = new THREE.Group();
       this.drawFloor(group);
       this.drawWalls(group);
@@ -35444,7 +35448,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54013" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56268" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
