@@ -6,9 +6,30 @@ import {
     Bullet
 } from './weapon.js';
 
+class Player {
+    constructor(scene, pos) {
+        this.pos = pos;
+        var geo = new THREE.BoxGeometry(1, 1, 1)
+        var mat = new THREE.MeshBasicMaterial({
+            wireframe: true,
+            color: 0xffffff
+        });
+        var box = new THREE.Mesh(geo, mat)
+        scene.add(box);
+        this.box = box;
 
-class Room {
-    constructor() {
+        this.speed = 1;
+    }
+
+    move(x, z, dt) {
+        this.pos.x += x * this.speed * dt;
+        this.pos.z += z * this.speed * dt;
+    }
+}
+export class Room {
+    constructor(scene, size, pos) {
+        this.scene = scene;
+
         this.activated = false;
         this.unlocked = false;
 
@@ -22,8 +43,31 @@ class Room {
         this.listeners = {};
 
         this.player = null;
-    }
+        this.playerEntered = false;
 
+        this.pos = pos;
+        this.size = size;
+
+        this.walls = new THREE.Group();
+
+        let walls = [
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+            [0, 1, 1, 0],
+            [1, 0, 0, 1],
+        ].map(([x, y, width, height]) => {
+            let geom = new THREE.BoxGeometry((width * size.width || 3), 5, (height * size.height || 3));
+            let wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+            }));
+            wall.position.set(x * size.width, 0, y * size.height);
+            return wall;
+        });
+        walls.forEach(w => this.walls.add(w));
+        scene.add(this.walls);
+        console.log(this.walls);
+
+    }
     //* Events
 
     on(event, func) {
@@ -47,10 +91,10 @@ class Room {
 
     //* Player
     mountPlayer(player) {
-        this.player = player;
+        this.playerEntered = true;
     }
     unmountPlayer() {
-        this.player = null;
+        this.playerEntered = false;
     }
 
     //* Structure/layout
@@ -60,6 +104,19 @@ class Room {
             ...rooms,
         }
     }
+
+    //*
+    handleEvent(evt) {
+        this.player.handleEvent(evt);
+    }
+
+    //*
+
+    draw() {
+        this.walls.position.x = this.pos.x - this.player.pos.x;
+        this.walls.position.z = this.pos.z - this.player.pos.z;
+    }
+
 }
 class NormalRoom extends Room {
     constructor(_difficulty) {
@@ -81,16 +138,18 @@ class NormalRoom extends Room {
     draw() {}
 
     update(dt) {
-        this.player.update(dt);
-        this.entities.forEach(entity => entity.update(dt));
-        this.bullets.forEach(bullet => bullet.update(dt));
+        if (this.playerEntered) {
+            this.player.update(dt);
+            this.entities.forEach(entity => entity.update(dt));
+            this.bullets.forEach(bullet => bullet.update(dt));
+        }
     }
 }
 class EntryRoom extends Room {
     constructor(seed) {}
 
     generate() {
-        let
+        // let
     }
 
     extend(x, y, l) {
