@@ -11,19 +11,35 @@ class Body extends Entity {
    * @param coords {Object {x {Number},z {Number}} - The coordinates on a 2D plane of the Body.
    */
   constructor(defense,health,coords) {
+    this.torso=new BodyPart({x:coords.x,y:coords.y,z:coords.z},4,"body",null,[],1,"body");
     this.random=new Math.seedrandom("Fox is weird!");
     this.defense=defense;
   }
 
-  takeBullet(){
-
+  takeBullet(bullet){
+    let damageDealt=torso.takeBullet(bullet);
+    this.takeDamage(damageDealt);
   }
-  takeSword(){
 
+  takeDamage(damage){
+    this.health-=damage;
+    if(this.health<=0) this.unalive();
+  }
+
+  unalive(){
+    alert("Dead! Oh no!");
+  }
+
+  takeSlash(){
+    let damageDealt=this.torso.takeSlash();
+    this.takeDamage(damageDealt);
   }
 
   update(dt){
-    this.updateByVelocity(dt);
+  }
+
+  walk(velocity,dt){
+    this.torso.walk(velocity.dt);
   }
 
 }
