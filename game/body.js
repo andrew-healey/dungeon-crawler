@@ -10,14 +10,16 @@ class Body extends Entity {
    * @param health {Number} - The HP of the Body. Usually from 100-1000.
    * @param coords {Object {x {Number},z {Number}} - The coordinates on a 2D plane of the Body.
    */
-  constructor(defense, health, coords) {
+  constructor(coords, defense, health,angle=0) {
+    super(coords, angle, 3, 30);
     this.torso = new BodyPart({
       x: coords.x,
       y: coords.y,
       z: coords.z
-    }, 4, "body", null, [], 1, "body");
+    }, 3, "body", null, [], 1, "body");
     this.random = new Math.seedrandom("Fox is weird!");
     this.defense = defense;
+    this.triggering = false;
   }
 
   takeBullet(bullet) {
@@ -34,15 +36,50 @@ class Body extends Entity {
     alert("Dead! Oh no!");
   }
 
+  trigger(v) {
+    this.triggering = v;
+  }
+
   takeSlash() {
     let damageDealt = this.torso.takeSlash();
     this.takeDamage(damageDealt);
   }
 
-  update(dt) {}
+  update(dt) {
+    if (this.triggering) {
+      this.body.useWeapon()
+    }
+    this.updateByVelocity(dt);
+    if (this.room) {
+      this.clampTo(room);
+    }
+    this.updateMeshPosition();
+
+  }
 
   walk(velocity, dt) {
     this.torso.walk(velocity.dt);
+  }
+
+  equip(weapon) {
+    weapon.setOwner(this);
+    weapon.onTrigger(this.handleWeapon.bind(this));
+  }
+  drop(weapon) {
+    weapon.onTrigger(() => null);
+  }
+  enter(room) {
+    this.room = room;
+  }
+  handleWeapon(t, b) {
+    ({
+      'ranged': () => this.room.addBullet(b),
+      'melee': () => this.room.melee(b)
+    })[t]();
+  }
+
+  die(){
+    delete this;
   }
 
 }

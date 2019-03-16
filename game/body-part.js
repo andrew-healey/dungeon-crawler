@@ -60,6 +60,10 @@ class BodyPart extends Entity {
     return this.model;
   }
 
+  addChild(child) {
+    this.children.push(child);
+  }
+
   /**
    * Takes damage--or not--from a slash attack, returning the taken damage.
    * @param sword {Entity} - The sword Entity whose size is the length of the blade.
@@ -139,9 +143,14 @@ class BodyPart extends Entity {
     if (this.type == "weapon") {
       if (this.specificType !== weaponId) return weaponNum;
       if (weaponNum > 0) return weaponNum - 1;
-      if (this.specificType === "sword") this.parent.angle = Math.atan(Math.tan(Math.abs(timeUsed * velocity / this.period)));
-      else if (this.specificType === "gun") {
-        if (timeUsed < this.period / 4 || timeUsed > 3 * this.period / 4) return -1;
+      if (this.specificType === "sword") {
+        this.triggerEvent();
+        this.parent.angle = Math.atan(Math.tan(Math.abs(timeUsed * velocity / this.period)));
+      } else if (this.specificType === "gun") {
+        this.triggerEvent();
+        if (timeUsed < this.period / 4 || timeUsed > 3 * this.period / 4) {
+          return -1;
+        }
         this.customAnimation = true;
       }
       return -1;
