@@ -1,16 +1,14 @@
 import random from 'seed-random';
+import * as THREE from 'three';
 import {
     MeleeWeapon,
     RangedWeapon,
     Bullet
-} from './game.js';
+} from './weapon.js';
+
 
 class Room {
     constructor() {
-        this.enitities = [];
-        this.bullets = [];
-        this.player = null;
-
         this.activated = false;
         this.unlocked = false;
 
@@ -22,6 +20,8 @@ class Room {
         }
 
         this.listeners = {};
+
+        this.player = null;
     }
 
     //* Events
@@ -30,7 +30,7 @@ class Room {
         if (this.listeners.hasOwnProperty(event)) {
             this.listeners[event].push(func);
         } else {
-            this.listeners[event] = [];
+            this.listeners[event] = [func];
         }
     }
 
@@ -45,40 +45,55 @@ class Room {
         }
     }
 
-    //* Generation/reset
-    reset() {
-        this.enitities = [];
-        // this.bullets = 
+    //* Player
+    mountPlayer(player) {
+        this.player = player;
     }
-    generateWave(number) {
-        this.entities = Array(number).fill(seed()).map(s => new Entity())
+    unmountPlayer() {
+        this.player = null;
     }
 
+    //* Structure/layout
     connect(rooms) {
         this.connections = {
             ...this.connections,
             ...rooms,
         }
     }
-
-    enterPlayer(player) {
-        this.player = player;
+}
+class NormalRoom extends Room {
+    constructor(_difficulty) {
+        this.enemies = [];
+        this.bullets = [];
     }
 
-    draw() {
 
+    //* Generation/reset
+    reset() {
+        this.enitities = [];
+    }
+    generateWave(number) {
+        this.entities = Array(number).fill(seed()).map(s => new Entity(this));
     }
 
-    update() {
 
+    //* draw+update;
+    draw() {}
+
+    update(dt) {
+        this.player.update(dt);
+        this.entities.forEach(entity => entity.update(dt));
+        this.bullets.forEach(bullet => bullet.update(dt));
     }
 }
-class Level {
-    constructor(seed) {
-        this.seed = seed;
-    }
+class EntryRoom extends Room {
+    constructor(seed) {}
 
     generate() {
         let
+    }
+
+    extend(x, y, l) {
+
     }
 }

@@ -27,6 +27,7 @@
   "homepage": "https://github.com/Sesamestrong/dungeon-crawler#readme",
   "dependencies": {
     "npm": "^6.9.0",
-    "seed-random": "^2.2.0"
+    "seed-random": "^2.2.0",
+    "three": "^0.102.1"
   }
 }
