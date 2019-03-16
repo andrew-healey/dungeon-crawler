@@ -12,7 +12,7 @@ export class Entity {
      * @param angleComponents {Object {... {Number}}} - The individual components of the angle, which are summed to find the net angle.
      * @todo Add a y coordinate that defaults to 0
      */
-    constructor(pos, angle, size, speed, vel, angleComponents = {}) {
+    constructor(pos, angle, size, speed, angleComponents = {}) {
         this.room = null;
 
         this.pos = pos;
@@ -36,7 +36,6 @@ export class Entity {
             this.geom.rotation.y = -this.angle;
             scene.add(this.geom);
         }
-        console.log(this);
     }
 
     enter(room) {
@@ -131,7 +130,6 @@ export class Entity {
 export class Player extends Entity {
     constructor(camera, pos) {
         super(pos, 0, 3, 30);
-
         this.camera = camera;
 
         this.weapons = [];
@@ -151,12 +149,15 @@ export class Player extends Entity {
         this.group = new THREE.Group();
         this.group.add(this.core);
         this.group.add(this.box);
-        // this.group.position.set(0, 0, 0);
-
+        this.group.position.set(0, 0, 0);
+        this.group.name = 'playersprite'
         this.camera.controls.target = this.group.position;
         this.camera.controls.update();
         return this.group;
     }
+
+    // initGeometryCB() {
+    // }
 
     equip(weapon) {
         this.weapons.unshift(weapon);
@@ -198,6 +199,7 @@ export class Player extends Entity {
             cameraOffset.x + this.pos.x,
             cameraOffset.y,
             cameraOffset.z + this.pos.z);
+        this.camera.controls.target = this.geom.position;
         this.camera.controls.update();
     }
 
