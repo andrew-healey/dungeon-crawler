@@ -1,4 +1,4 @@
-class BodyPart {
+class BodyPart extends Entity{
 
   /**
    * Describes the BodyPart class, which holds a Body together and is in charge of determining structure of a body to render. It can send events such as a damage-taking event to the main Body, as well as receive and pass down hits.
@@ -11,7 +11,7 @@ class BodyPart {
   constructor(size = 4, type = "body", parent, children = [], defense = 1) {
     this.parent = parent;
     this.children = children;
-    this.size = size;
+    super({x:0,z:0},angle,size);
     this.defense=defense;
     //Take care of some things, might get phased out
     if (this.type == "body") {
@@ -32,8 +32,8 @@ class BodyPart {
    * @param damage {Number} - The damage that the sword will do on a successful hit.
    */
   takeSlash(swordOrigin, length, startTheta, rotation, damage) {
-    let distance = Math.sqrt((myCoords.x - swordOrigin.x) ** 2 + (myCoords.y - swordOrigin.y) ** 2);
-    let phi = Math.arccos((myCoords.x - swordOrigin.x) / distance);
+    let distance = Math.sqrt(swordOrigin.position.x ** 2 + swordOrigin.position.z ** 2);
+    let phi = Math.arccos(swordOrigin.position.x / distance);
     let deltAng = Math.abs(startTheta - phi);
     let currDamage = 0;
     if (deltAng <= rotation && distance <= length) {
@@ -44,8 +44,8 @@ class BodyPart {
     for (child of children) {
       //Next one uses sword location relative to the child.
       let modifiedSwordOrigin = {
-        x: swordOrigin.x - child.x,
-        y: swordOrigin.y - child.y
+        x: swordOrigin.position.x - child.position.x,
+        z: swordOrigin.position.z - child.position.z
       };
       currDamage += child.takeSlash(modifiedSwordOrigin, length, startTheta, rotation, damage);
     }
@@ -59,7 +59,7 @@ class BodyPart {
    * @param bullet {Entity} - The bullet to take.
    */
   takeBullet(bullet){
-    
+      
   }
 
 }
