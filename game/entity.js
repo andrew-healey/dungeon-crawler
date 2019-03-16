@@ -172,9 +172,9 @@ export class Player extends Entity {
 
     setInterval(() => {
       this.boxes.forEach(b => {
-        b.rotation.x += (Math.random() - 0.5);
-        b.rotation.y += (Math.random() - 0.5);
-        b.rotation.z += (Math.random() - 0.5);
+        b.rotation.x += 0.02
+        b.rotation.y += 0.04
+        b.rotation.z += 0.06
       })
       // this.box2.rotation.x += 0.01
       // this.box2.rotation.y += 0.01
@@ -314,7 +314,7 @@ export class Creature extends Entity {
     return this.geom;
   }
 
-  wait(t){
+  wait(t) {
     this.waiting = true;
     setTimeout(() => {
       this.waiting = false;

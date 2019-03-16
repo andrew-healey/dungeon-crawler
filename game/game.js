@@ -332,6 +332,10 @@ export class Level {
     }
 
     generate() {
+        this.width = 2;
+        this.depth = 1;
+        this.step = 110;
+
         this.rooms = [new WaveRoom(1, {
             width: 100,
             depth: 100
@@ -380,6 +384,12 @@ export class Level {
         //     room.draw(scene);
         //     (neighbors || []).map(drawRoom);
         // }
+        let geometry = new THREE.BoxGeometry(this.width * this.step * 2, 150, this.depth * this.step * 2);
+        let material = new THREE.MeshBasicMaterial({
+            color: 0x222222
+        });
+        let cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
 
         this.rooms.map(a => a.draw(scene));
         this.halls.forEach(a => a.draw(scene));

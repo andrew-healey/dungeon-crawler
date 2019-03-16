@@ -34467,9 +34467,9 @@ function (_Entity) {
       this.camera.controls.update();
       setInterval(function () {
         _this3.boxes.forEach(function (b) {
-          b.rotation.x += Math.random() - 0.5;
-          b.rotation.y += Math.random() - 0.5;
-          b.rotation.z += Math.random() - 0.5;
+          b.rotation.x += 0.02;
+          b.rotation.y += 0.04;
+          b.rotation.z += 0.06;
         }); // this.box2.rotation.x += 0.01
         // this.box2.rotation.y += 0.01
         // this.box2.rotation.z += 0.01
@@ -35214,6 +35214,9 @@ function () {
   _createClass(Level, [{
     key: "generate",
     value: function generate() {
+      this.width = 2;
+      this.depth = 1;
+      this.step = 110;
       this.rooms = [new WaveRoom(1, {
         width: 100,
         depth: 100
@@ -35259,6 +35262,12 @@ function () {
       //     room.draw(scene);
       //     (neighbors || []).map(drawRoom);
       // }
+      var geometry = new THREE.BoxGeometry(this.width * this.step * 2, 150, this.depth * this.step * 2);
+      var material = new THREE.MeshBasicMaterial({
+        color: 0x222222
+      });
+      var cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
       this.rooms.map(function (a) {
         return a.draw(scene);
       });
