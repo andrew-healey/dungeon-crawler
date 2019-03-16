@@ -93,12 +93,14 @@ class BodyPart extends Entity {
   /**
    * Takes a bullet and returns the damage that it inflicted.
    * @param bullet {Entity} - The bullet to take.
+   * @todo Make bullet hit method that takes a BodyPart that cannot be hit anymore - also deals 'damage' to a bullet, which makes it disappear in the next frame
    */
   takeBullet(bullet, damage) {
     let currDamage = 0;
     let isTouching = this.collidesWith(bullet);
     if (isTouching) {
       currDamage = damage;
+      bullet.hit(this);
     } else {
       for (child of children) {
         let modifiedBulletOrigin = {
