@@ -94,6 +94,10 @@ export class Entity {
         return this.dist(entity) <= this.size + entity.size;
     }
 
+  contains(entity){
+    return this.dist(entity)+entity.radius>this.radius;
+  }
+
     angleTo(pt) {
         return -Math.atan2(pt.x, pt.z) - this.angle;
     }
