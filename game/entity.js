@@ -9,9 +9,11 @@ export class Entity {
    * @param angle {Number} - The angle by which the Entity (containing the children as well) is rotated about its origin.
    * @param size {Number} - The radius of the hitbox of the Entity.
    * @param speed {Number} - The initial speed of the Entity-like for bullets
+   * @param vel {Object {x {Number},y {Number},z {Number}}} - The direction of the velocity vector.
    * @param angleComponents {Object {... {Number}}} - The individual components of the angle, which are summed to find the net angle.
+   * @todo Add a y coordinate that defaults to 0
    */
-  constructor(scene, pos, angle, size, speed,angleComponents={}) {
+  constructor(scene, pos, angle, size, speed, vel, angleComponents = {}) {
     this.room = null;
 
     this.pos = pos;
@@ -22,7 +24,7 @@ export class Entity {
     this.angle = angle;
     this.size = size;
     this.speed = speed;
-    this.angleComponents=angleComponents;
+    this.angleComponents = angleComponents;
 
     this.scene = scene;
     this.initGeometry && this.scene.add(this.initGeometry());
@@ -81,10 +83,7 @@ export class Entity {
     }
   }
 
-  draw() {
-    const ALL_TYPES = ["gun":{x:0.6,y:0.6,z:1}, "sword":{x:0.3,y:0.1,z:1}, "hand":{x:0.5,y:1,z:1}, "body":{radius:1}, "leg":{x:0.2,y:1,z:0.2}, "arm":{x:0.2,y:0.2,z:1}];
-    this.model=new THREE.Box3(this.size*);
-  }
+  initGeometry() {}
 
   /**
    * Updates the velocity of the entity.
@@ -116,8 +115,8 @@ export class Entity {
     return -Math.atan2(pt.x, pt.z) - this.angle;
   }
 
-  rotateComponent(changeObj){
-    return Object.assign(this.angleComponents,changeObj);
+  rotateComponent(changeObj) {
+    return Object.assign(this.angleComponents, changeObj);
   }
 }
 
