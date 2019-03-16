@@ -1,8 +1,5 @@
 import * as THREE from 'three';
 export class Entity {
-
-    <<
-    << << < HEAD
     /**
      * Describes the Entity class, which handles movement, rendering and collision of objects.
      * @constructor
@@ -93,7 +90,6 @@ export class Entity {
         };
     }
 
-
     updateByDirection(dt) {
         let unit = this.unit();
         this.pos.x += dt * unit.x * this.speed;
@@ -151,7 +147,7 @@ export class Entity {
         if (this.pos.z < entity.pos.z) this.pos.z = entity.pos.z;
     }
 }
-export class Player extends Entity {
+export class Player extends Body {
     constructor(camera, pos) {
         super(pos, 0, 3, 30);
         this.camera = camera;
@@ -199,6 +195,18 @@ export class Player extends Entity {
         //     color: 0xAAFFAA
         // }));
         // scene.add(this.debugger);
+
+        let gun = new Weapon();
+        let arm = new BodyPart(0, 5, "appendage", undefined, [gun], 1, "appendage");
+        super({
+            x: 0,
+            y: 0,
+            z: 0
+        }, 2, 10);
+        this.torso.addChild(arm);
+        this.equip(gun);
+        //Render into this.group
+        return this.group;
 
 
 
@@ -300,18 +308,29 @@ export class Player extends Entity {
         this.trigger(false);
     }
 }
-export class Creature extends Entity {
+export class Creature extends Body {
     constructor(room, pos, size) {
-        super(pos, Math.random() * Math.PI * 2, size, 20, [], 10);
-        this.room = room;
+        super(pos, Math.floor(Math.random() * 5), 20, Math.random() * Math.PI * 2);
+        this.size = size;
+        this.enter(room);
     }
 
     initGeometry() {
-        this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
-            wireframe: false,
-            color: 0xffffff
-        }));
-        return this.geom;
+        /*this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+          wireframe: false,
+          color: 0xffffff
+        }));*/
+        let gun = new Weapon();
+        let arm = new BodyPart(0, 5, "appendage", undefined, [gun], 1, "appendage");
+        super({
+            x: 0,
+            y: 0,
+            z: 0
+        }, 2, 10);
+        this.torso.addChild(arm);
+        this.equip(gun);
+        //Do geometry, render into a ThreeJS group
+        return this.group;
     }
 
     update(dt) {
@@ -354,8 +373,7 @@ export class Creature extends Entity {
         this.room.deleteEnemy(this);
         delete this;
     }
-} ===
-=== =
+}
 /**
  * Describes the Entity class, which handles movement, rendering and collision of objects.
  * @constructor
@@ -683,4 +701,6 @@ export class Creature extends Body {
         super.die();
     }
 } >>>
->>> > 7e077238 c57b717ea14a6b7173a30acc14b9b293
+>>>
+>
+7e077238 c57b717ea14a6b7173a30acc14b9b293

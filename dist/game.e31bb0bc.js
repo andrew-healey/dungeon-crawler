@@ -34822,8 +34822,8 @@ function () {
       }));
       this.floor.rotateX(Math.PI / 2);
       this.floor.position.y = -2;
-      this.floor.position.x = -this.pos.x;
-      this.floor.position.z = -this.pos.z;
+      this.floor.position.x = this.pos.x;
+      this.floor.position.z = this.pos.z;
       group.add(this.floor);
     }
   }, {
@@ -34910,8 +34910,8 @@ function () {
       }));
       this.floor.rotateX(Math.PI / 2);
       this.floor.position.y = -2;
-      this.floor.position.x = -this.pos.x;
-      this.floor.position.z = -this.pos.z;
+      this.floor.position.x = this.pos.x;
+      this.floor.position.z = this.pos.z;
       group.add(this.floor);
     }
   }, {
