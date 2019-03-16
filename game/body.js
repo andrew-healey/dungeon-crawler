@@ -23,7 +23,7 @@ class Body extends Entity {
   }
 
   update(dt){
-    this.updateByDirection(dt,this.box);
+    this.updateByVelocity(dt);
   }
 
 }

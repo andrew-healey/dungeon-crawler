@@ -54,7 +54,10 @@ export class Entity {
     }
   }
 
-  initGeometry() {}
+  initGeometry() {
+    this.camera.controls.lookAt(this.model);
+    this.camera.update();
+  }
 
   /**
    * Updates the velocity of the entity.
@@ -198,15 +201,15 @@ export class Player extends Entity {
     }
 
     initGeometry() {
-        this.box = new THREE.Mesh(
+        this.model = new THREE.Mesh(
             new THREE.BoxGeometry(this.size, this.size, this.size),
             new THREE.MeshBasicMaterial({
                 wireframe: true,
                 color: 0xffffff
             }));
-        this.camera.lookAt(this.box.position);
+        this.camera.lookAt(this.model.position);
         this.camera.controls.update();
-        return this.box;
+        return this.model;
     }
 
     equip(weapon) {
@@ -299,17 +302,17 @@ export class Creature extends Entity {
     }
 
     initGeometry() {
-        this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        this.model = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
             wireframe: false,
             color: 0xffffff
         }));
-        return this.box;
+        return this.model;
     }
 
     update(dt) {
         if (Math.random() > 0.9) this.angle += Math.random() - 0.5
 
-        this.updateByDirection(dt, this.box);
+        this.updateByDirection(dt, this.model);
 
         if (this.room) {
             if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {

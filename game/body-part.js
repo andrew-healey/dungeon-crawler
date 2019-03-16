@@ -50,7 +50,7 @@ class BodyPart extends Entity {
     }];
     let thisType = ALL_TYPES[specificId] || thisType[weaponId];
     this.model = new THREE.Group();
-    this.piece = new THREE.Box3(this.size * thisType.x, this.size * thisType.y, this.size * thisType.z);
+    this.piece = new THREE.BoxGeometry(this.size * thisType.x, this.size * thisType.y, this.size * thisType.z);
     for (child of children) {
       this.model.add(child.initGeometry());
     }
