@@ -68,7 +68,7 @@ export class Entity {
     }
 
     lookAt(pos) {
-        this.angle = -Math.atan2(pos.x, pos.z);
+        this.angle = -Math.atan2(pos.x - this.pos.x, pos.z - this.pos.z);
     }
 
     unit() {
@@ -149,19 +149,43 @@ export class Player extends Entity {
         this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
             color: 0xffffff,
         }));
-        this.box = new THREE.Mesh(
+        this.boxes = Array(3).fill(0).map(a => new THREE.Mesh(
             new THREE.BoxGeometry(this.size, this.size, this.size),
             new THREE.MeshBasicMaterial({
                 wireframe: true,
                 color: 0xffffff
-            }));
+            })));
         this.group = new THREE.Group();
         this.group.add(this.core);
-        this.group.add(this.box);
+
+        this.boxes.forEach(b => this.group.add(b));
+
         this.group.position.set(0, 0, 0);
         this.group.name = 'playersprite'
         this.camera.controls.target = this.group.position;
         this.camera.controls.update();
+
+        setInterval(() => {
+            this.boxes.forEach(b => {
+                console.log(b);
+                b.rotation.x += (Math.random() - 0.5);
+                b.rotation.y += (Math.random() - 0.5);
+                b.rotation.z += (Math.random() - 0.5);
+            })
+            // this.box2.rotation.x += 0.01
+            // this.box2.rotation.y += 0.01
+            // this.box2.rotation.z += 0.01
+            // // this.core.rotation.y += 0.07
+            // // this.core.rotation.x += 0.07
+            // // this.core.rotation.z += 0.07
+        }, 10);
+
+        // this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+        //     color: 0xAAFFAA
+        // }));
+        // scene.add(this.debugger);
+
+
         return this.group;
     }
 
@@ -249,7 +273,7 @@ export class Player extends Entity {
             'KeyD': () => this.walkX(0),
             'KeyW': () => this.walkZ(0),
             'KeyS': () => this.walkZ(0),
-            'Space': () => (this.weapon && this.trigger(false)),
+            'Space': () => (this.trigger(false)),
         })[key] || (() => 1))();
     }
     mouseDown(evt) {

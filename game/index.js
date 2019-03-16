@@ -57,7 +57,7 @@ level.draw(scene);
 console.log(scene);
 
 //#region Controls
-controls.target = player.box.position;
+controls.target = player.geom.position;
 controls.update();
 
 controls.enableKeys = false;

@@ -222,7 +222,6 @@ export class WaveRoom extends Room {
         };
 
         this.generateWave();
-
     }
 
     generateWave() {
@@ -233,6 +232,21 @@ export class WaveRoom extends Room {
     }
 
     draw(scene) {
+        this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+            color: 0xAAFFAA
+        }));
+        scene.add(this.debugger);
+        // this.geometry = new THREE.Geometry();
+        // this.geometry.vertices.push(
+        //     new THREE.Vector3(-10, 0, 0),
+        //     new THREE.Vector3(10, 0, 0)
+        //     new THREE.Vector3(0, 10, 0),
+        // );
+        // this.debugger = new THREE.Mesh(this.geometry, new THREE.LineBasicMaterial({
+        //     color: 0xAAFFAA
+        // }));
+        // scene.add(this.debugger);
+
         let group = new THREE.Group();
         this.drawFloor(group);
         this.drawWalls(group);
@@ -267,6 +281,7 @@ export class WaveRoom extends Room {
         if (i.length > 0) {
             let pt = i[0].point;
             this.player.lookAt(pt);
+            this.debugger.position.set(pt.x, pt.y, pt.z);
             // for (let i = 0; i < this.enemies.length; i++) {
             //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
             // }

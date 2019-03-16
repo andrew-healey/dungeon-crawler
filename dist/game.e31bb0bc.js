@@ -34332,7 +34332,7 @@ function () {
   }, {
     key: "lookAt",
     value: function lookAt(pos) {
-      this.angle = -Math.atan2(pos.x, pos.z);
+      this.angle = -Math.atan2(pos.x - this.pos.x, pos.z - this.pos.z);
     }
   }, {
     key: "unit",
@@ -34440,20 +34440,44 @@ function (_Entity) {
   _createClass(Player, [{
     key: "initGeometry",
     value: function initGeometry() {
+      var _this3 = this;
+
       this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
         color: 0xffffff
       }));
-      this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
-        wireframe: true,
-        color: 0xffffff
-      }));
+      this.boxes = Array(3).fill(0).map(function (a) {
+        return new THREE.Mesh(new THREE.BoxGeometry(_this3.size, _this3.size, _this3.size), new THREE.MeshBasicMaterial({
+          wireframe: true,
+          color: 0xffffff
+        }));
+      });
       this.group = new THREE.Group();
       this.group.add(this.core);
-      this.group.add(this.box);
+      this.boxes.forEach(function (b) {
+        return _this3.group.add(b);
+      });
       this.group.position.set(0, 0, 0);
       this.group.name = 'playersprite';
       this.camera.controls.target = this.group.position;
       this.camera.controls.update();
+      setInterval(function () {
+        _this3.boxes.forEach(function (b) {
+          console.log(b);
+          b.rotation.x += Math.random() - 0.5;
+          b.rotation.y += Math.random() - 0.5;
+          b.rotation.z += Math.random() - 0.5;
+        }); // this.box2.rotation.x += 0.01
+        // this.box2.rotation.y += 0.01
+        // this.box2.rotation.z += 0.01
+        // // this.core.rotation.y += 0.07
+        // // this.core.rotation.x += 0.07
+        // // this.core.rotation.z += 0.07
+
+      }, 10); // this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+      //     color: 0xAAFFAA
+      // }));
+      // scene.add(this.debugger);
+
       return this.group;
     } // initGeometryCB() {
     // }
@@ -34480,14 +34504,14 @@ function (_Entity) {
   }, {
     key: "handleWeapon",
     value: function handleWeapon(t, b) {
-      var _this3 = this;
+      var _this4 = this;
 
       ({
         'ranged': function ranged() {
-          return _this3.room.addBullet(b);
+          return _this4.room.addBullet(b);
         },
         'melee': function melee() {
-          return _this3.room.emit('melee');
+          return _this4.room.emit('melee');
         }
       })[t]();
     }
@@ -34524,36 +34548,36 @@ function (_Entity) {
   }, {
     key: "keyDown",
     value: function keyDown(evt) {
-      var _this4 = this;
+      var _this5 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this4.walkX(1);
+          return _this5.walkX(1);
         },
         'ArrowRight': function ArrowRight() {
-          return _this4.walkX(-1);
+          return _this5.walkX(-1);
         },
         'ArrowUp': function ArrowUp() {
-          return _this4.walkZ(1);
+          return _this5.walkZ(1);
         },
         'ArrowDown': function ArrowDown() {
-          return _this4.walkZ(-1);
+          return _this5.walkZ(-1);
         },
         'KeyA': function KeyA() {
-          return _this4.walkX(1);
+          return _this5.walkX(1);
         },
         'KeyD': function KeyD() {
-          return _this4.walkX(-1);
+          return _this5.walkX(-1);
         },
         'KeyW': function KeyW() {
-          return _this4.walkZ(1);
+          return _this5.walkZ(1);
         },
         'KeyS': function KeyS() {
-          return _this4.walkZ(-1);
+          return _this5.walkZ(-1);
         },
         'Space': function Space() {
-          return _this4.weapons && _this4.trigger(true);
+          return _this5.weapons && _this5.trigger(true);
         }
       })[key] || function () {
         return 1;
@@ -34562,36 +34586,36 @@ function (_Entity) {
   }, {
     key: "keyUp",
     value: function keyUp(evt) {
-      var _this5 = this;
+      var _this6 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this5.walkX(0);
+          return _this6.walkX(0);
         },
         'ArrowRight': function ArrowRight() {
-          return _this5.walkX(0);
+          return _this6.walkX(0);
         },
         'ArrowUp': function ArrowUp() {
-          return _this5.walkZ(0);
+          return _this6.walkZ(0);
         },
         'ArrowDown': function ArrowDown() {
-          return _this5.walkZ(0);
+          return _this6.walkZ(0);
         },
         'KeyA': function KeyA() {
-          return _this5.walkX(0);
+          return _this6.walkX(0);
         },
         'KeyD': function KeyD() {
-          return _this5.walkX(0);
+          return _this6.walkX(0);
         },
         'KeyW': function KeyW() {
-          return _this5.walkZ(0);
+          return _this6.walkZ(0);
         },
         'KeyS': function KeyS() {
-          return _this5.walkZ(0);
+          return _this6.walkZ(0);
         },
         'Space': function Space() {
-          return _this5.weapon && _this5.trigger(false);
+          return _this6.trigger(false);
         }
       })[key] || function () {
         return 1;
@@ -34620,13 +34644,13 @@ function (_Entity2) {
   _inherits(Creature, _Entity2);
 
   function Creature(room, pos, size) {
-    var _this6;
+    var _this7;
 
     _classCallCheck(this, Creature);
 
-    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20, [], 10));
-    _this6.room = room;
-    return _this6;
+    _this7 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20, [], 10));
+    _this7.room = room;
+    return _this7;
   }
 
   _createClass(Creature, [{
@@ -35022,6 +35046,20 @@ function (_Room) {
   }, {
     key: "draw",
     value: function draw(scene) {
+      this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+        color: 0xAAFFAA
+      }));
+      scene.add(this.debugger); // this.geometry = new THREE.Geometry();
+      // this.geometry.vertices.push(
+      //     new THREE.Vector3(-10, 0, 0),
+      //     new THREE.Vector3(10, 0, 0)
+      //     new THREE.Vector3(0, 10, 0),
+      // );
+      // this.debugger = new THREE.Mesh(this.geometry, new THREE.LineBasicMaterial({
+      //     color: 0xAAFFAA
+      // }));
+      // scene.add(this.debugger);
+
       var group = new THREE.Group();
       this.drawFloor(group);
       this.drawWalls(group);
@@ -35062,7 +35100,8 @@ function (_Room) {
 
       if (i.length > 0) {
         var pt = i[0].point;
-        this.player.lookAt(pt); // for (let i = 0; i < this.enemies.length; i++) {
+        this.player.lookAt(pt);
+        this.debugger.position.set(pt.x, pt.y, pt.z); // for (let i = 0; i < this.enemies.length; i++) {
         //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
         // }
       }
@@ -35423,7 +35462,7 @@ level.generate();
 level.draw(scene);
 console.log(scene); //#region Controls
 
-controls.target = player.box.position;
+controls.target = player.geom.position;
 controls.update();
 controls.enableKeys = false;
 controls.enabled = false; // controls.maxPolarAngle = Math.PI / 2;
@@ -35505,7 +35544,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63338" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50624" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
