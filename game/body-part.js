@@ -20,7 +20,8 @@ class BodyPart extends Entity {
     else if (type === "appendage") this.specificType = specificType || "leg";
     this.yRotation = 0;
     this.animationTime = 0;
-    this.period = this.size/2;
+    this.period = this.size / 2;
+    this.customAnimation=false;
   }
 
   /**
@@ -100,13 +101,17 @@ class BodyPart extends Entity {
     if (this.type == "weapon") {
       if (this.specificType !== weaponId) return weaponNum;
       if (weaponNum > 0) return weaponNum - 1;
-      this.angle = Math.atan(Math.tan(Math.abs(timeUsed*velocity/this.period)));
+      if (this.specificType === "sword") this.parent.angle = Math.atan(Math.tan(Math.abs(timeUsed * velocity / this.period)));
+      else if (this.specificType === "gun") {
+        if(timeUsed<this.period/4||timeUsed>3*this.period/4) return -1;
+        this.customAnimation = true;
+      }
       return -1;
     }
 
     for (let i = 0; i < children.length; i++) {
-      weaponNum = child.useWeapon(weaponNum,weaponId, directionSign, timeUsed);
-      if(weaponNum<0) return weaponNum;
+      weaponNum = child.useWeapon(weaponNum, weaponId, directionSign, timeUsed);
+      if (weaponNum < 0) return weaponNum;
     }
     return weaponNum;
   }
