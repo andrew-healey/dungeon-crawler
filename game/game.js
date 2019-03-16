@@ -48,7 +48,6 @@ export class Hall {
             depth
         };
 
-        console.log(this.pos, this.size);
 
         this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
             color: 0x888888,
@@ -118,7 +117,6 @@ export class Room {
         this.floor.position.x = -this.pos.x;
         this.floor.position.z = -this.pos.z;
         group.add(this.floor)
-        console.log(group);
     }
     drawWalls(group) {
         let walls = [
@@ -137,7 +135,6 @@ export class Room {
             return wall;
         });
         walls.forEach(w => group.add(w))
-        console.log(group);
     }
     draw(scene) {
         let group = new THREE.Group();
@@ -146,13 +143,15 @@ export class Room {
 
         group.position.x = this.pos.x;
         group.position.z = this.pos.z;
-        console.log(group);
 
         scene.add(group);
+        console.log('asdf', scene);
+        this.scene = scene;
+        console.log(this.scene);
     }
 
     //* Player
-    enter(player) {
+    entered(player) {
         this.player = player;
     }
     exit() {
@@ -179,7 +178,15 @@ export class Room {
     //*
 
     updateBullets(dt) {
-        this.bullets.forEach(b => b.update(dt));
+        this.bullets.forEach(b => {
+            b.update(dt);
+            for (let i = 0; i < this.enemies.length; i++) {
+                let e = this.enemies[i];
+                if (b.collides(e)) {
+                    e.applyDamage(b.damage)
+                }
+            }
+        });
     }
     updatePlayer(dt) {
         this.player && this.player.update(dt);
@@ -190,7 +197,9 @@ export class Room {
     }
 
     addBullet(bullet) {
+        console.log(this.scene);
         this.bullets.push(bullet);
+        bullet.draw(this.scene);
     }
     deleteBullet(bullet) {
         this.scene.remove(bullet.bullet);
@@ -217,10 +226,23 @@ export class WaveRoom extends Room {
     }
 
     generateWave() {
-        this.enemies = Array(5).fill(0).map(a => new Creature(this, this.scene, {
+        this.enemies = Array(5).fill(0).map(a => new Creature(this, {
             x: Math.random() * this.size.width + this.pos.x,
             z: Math.random() * this.size.depth + this.pos.z
         }, 2));
+    }
+
+    draw(scene) {
+        let group = new THREE.Group();
+        this.drawFloor(group);
+        this.drawWalls(group);
+        this.enemies.map(a => a.draw(scene))
+
+        group.position.x = this.pos.x;
+        group.position.z = this.pos.z;
+
+        scene.add(group);
+        this.scene = scene;
     }
 
     updateEnemies(dt) {
@@ -244,12 +266,12 @@ export class WaveRoom extends Room {
         if (i.length > 0) {
             let pt = i[0].point;
             this.player.lookAt(pt);
-            for (let i = 0; i < this.enemies.length; i++) {
-                if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
-            }
+            // for (let i = 0; i < this.enemies.length; i++) {
+            //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
+            // }
         }
-
-        super.update(dt);
+        this.updateBullets(dt);
+        this.updatePlayer(dt);
         this.updateEnemies(dt);
     }
 
@@ -266,18 +288,19 @@ export class WaveRoom extends Room {
     }
 }
 
-
 export class Level {
     constructor({
         min,
         max
     }) {
         this.rooms = [];
+        this.currentRoom = null;
         this.player = null;
         this.halls = [];
 
         this.min = min;
         this.max = max;
+
     }
 
     generate() {
@@ -287,26 +310,31 @@ export class Level {
         }, {
             x: -50,
             z: -50
-        }), []];
+        })];
+        this.currentRoom = this.rooms[0];
+        if (this.player) this.currentRoom.player = this.player;
+        this.player.enter(this.rooms[0]);
     }
 
     add(player) {
         this.player = player;
+        if (this.currentRoom) this.currentRoom.player = player;
     }
 
     draw(scene) {
-        let drawRoom = ([room, neighbors]) => {
-            room.draw(scene);
-            (neighbors || []).map(drawRoom);
-        }
+        // let drawRoom = ([room, neighbors]) => {
+        //     room.draw(scene);
+        //     (neighbors || []).map(drawRoom);
+        // }
 
-        drawRoom(this.rooms);
+        this.rooms.map(a => a.draw(scene));
         this.halls.forEach(a => a.draw(scene));
         this.player.draw(scene);
     }
 
     update(dt) {
         this.player.update(dt);
+        this.currentRoom.update(dt);
     }
 
     keyDown(evt) {
@@ -317,6 +345,7 @@ export class Level {
     }
     mouseMove(evt) {
         if (this.player && this.player.mouseMove) this.player.mouseMove(evt);
+        this.currentRoom.mouseMove(evt);
     }
     mouseDown(evt) {
         if (this.player && this.player.mouseDown) this.player.mouseDown(evt);

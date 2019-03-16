@@ -36,7 +36,6 @@ export class Entity {
             this.geom.rotation.y = -this.angle;
             scene.add(this.geom);
         }
-        console.log(this);
     }
 
     enter(room) {
@@ -93,6 +92,7 @@ export class Entity {
         }
     }
     updateMeshPosition() {
+        // console.log(this);
         this.geom.position.set(this.pos.x, 0, this.pos.z);
         this.geom.rotation.y = -this.angle;
     }
@@ -152,9 +152,7 @@ export class Player extends Entity {
         this.group.add(this.box);
         this.group.position.set(0, 0, 0);
         this.group.name = 'playersprite'
-        console.log(this.group, this.group.position)
         this.camera.controls.target = this.group.position;
-        console.log(this.camera.controls);
         this.camera.controls.update();
         return this.group;
     }
@@ -165,6 +163,7 @@ export class Player extends Entity {
     equip(weapon) {
         this.weapons.unshift(weapon);
         weapon.setOwner(this);
+        weapon.onTrigger(this.handleWeapon.bind(this));
     }
     drop(weapon) {
         this.weapons.splice(this.weapons.indexof(weapons), 1);
@@ -174,6 +173,13 @@ export class Player extends Entity {
     enter(room) {
         this.room = room;
         room.entered(this);
+    }
+
+    handleWeapon(t, b) {
+        ({
+            'ranged': () => this.room.addBullet(b),
+            'melee': () => this.room.emit('melee')
+        })[t]();
     }
 
     update(dt) {
@@ -187,9 +193,9 @@ export class Player extends Entity {
         this.updateByVelocity(dt);
 
         if (this.room) {
-            if (!this.halls.some(h => this.isIn(h)) && !this.room.activated) {
-                this.clampTo(this.room);
-            }
+            // if (!this.halls.some(h => this.isIn(h)) && !this.room.activated) {
+            this.clampTo(this.room);
+            // }
         }
 
         this.updateMeshPosition();
@@ -221,7 +227,7 @@ export class Player extends Entity {
             'KeyD': () => this.walkX(-1),
             'KeyW': () => this.walkZ(1),
             'KeyS': () => this.walkZ(-1),
-            'Space': () => (this.weapon && this.trigger(true))
+            'Space': () => (this.weapons && this.trigger(true))
         })[key] || (() => 1))();
     }
     keyUp(evt) {
@@ -253,17 +259,17 @@ export class Creature extends Entity {
     }
 
     initGeometry() {
-        this.model = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
             wireframe: false,
             color: 0xffffff
         }));
-        return this.model;
+        return this.geom;
     }
 
     update(dt) {
-        if (Math.random() > 0.9) this.angle += Math.random() - 0.5
+        if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
 
-        this.updateByDirection(dt, this.model);
+        this.updateByDirection(dt);
 
         if (this.room) {
             if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {

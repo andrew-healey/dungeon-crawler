@@ -42,21 +42,18 @@ export class Weapon {
     }
 
 }
-let count = 0;
 export class Bullet extends Entity {
-    constructor(gun, speed = 1, size = 1) {
-        console.log(gun)
-        super();
+    constructor(gun, pos, angle, size = 1, speed = 1, ) {
+        super(pos, angle, size, speed);
         this.gun = gun;
-        this.id = count++;
         this.room = this.gun.room;
     }
 
     initGeometry() {
-        this.bullet = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
             color: 0x8800000
         }));
-        return this.bullet;
+        return this.geom;
     }
 
     update(dt) {
@@ -73,10 +70,9 @@ export class RangedWeapon extends Weapon {
     }
 
     triggerCB() {
-        console.log(this)
         this.triggerListener(
             "ranged",
-            new Bullet(this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSpeed, this.bulletSize)
+            new Bullet(this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSize, this.bulletSpeed, this.damage)
         );
     }
 }

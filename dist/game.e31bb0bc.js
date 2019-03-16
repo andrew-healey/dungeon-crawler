@@ -34287,8 +34287,6 @@ function () {
         this.geom.rotation.y = -this.angle;
         scene.add(this.geom);
       }
-
-      console.log(this);
     }
   }, {
     key: "enter",
@@ -34359,6 +34357,7 @@ function () {
   }, {
     key: "updateMeshPosition",
     value: function updateMeshPosition() {
+      // console.log(this);
       this.geom.position.set(this.pos.x, 0, this.pos.z);
       this.geom.rotation.y = -this.angle;
     }
@@ -34442,9 +34441,7 @@ function (_Entity) {
       this.group.add(this.box);
       this.group.position.set(0, 0, 0);
       this.group.name = 'playersprite';
-      console.log(this.group, this.group.position);
       this.camera.controls.target = this.group.position;
-      console.log(this.camera.controls);
       this.camera.controls.update();
       return this.group;
     } // initGeometryCB() {
@@ -34455,6 +34452,7 @@ function (_Entity) {
     value: function equip(weapon) {
       this.weapons.unshift(weapon);
       weapon.setOwner(this);
+      weapon.onTrigger(this.handleWeapon.bind(this));
     }
   }, {
     key: "drop",
@@ -34469,10 +34467,22 @@ function (_Entity) {
       room.entered(this);
     }
   }, {
-    key: "update",
-    value: function update(dt) {
+    key: "handleWeapon",
+    value: function handleWeapon(t, b) {
       var _this3 = this;
 
+      ({
+        'ranged': function ranged() {
+          return _this3.room.addBullet(b);
+        },
+        'melee': function melee() {
+          return _this3.room.emit('melee');
+        }
+      })[t]();
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
       var cameraOffset = {
         x: this.camera.position.x - this.pos.x,
         y: this.camera.position.y,
@@ -34481,11 +34491,8 @@ function (_Entity) {
       this.updateByVelocity(dt);
 
       if (this.room) {
-        if (!this.halls.some(function (h) {
-          return _this3.isIn(h);
-        }) && !this.room.activated) {
-          this.clampTo(this.room);
-        }
+        // if (!this.halls.some(h => this.isIn(h)) && !this.room.activated) {
+        this.clampTo(this.room); // }
       }
 
       this.updateMeshPosition();
@@ -34535,7 +34542,7 @@ function (_Entity) {
           return _this4.walkZ(-1);
         },
         'Space': function Space() {
-          return _this4.weapon && _this4.trigger(true);
+          return _this4.weapons && _this4.trigger(true);
         }
       })[key] || function () {
         return 1;
@@ -34614,17 +34621,17 @@ function (_Entity2) {
   _createClass(Creature, [{
     key: "initGeometry",
     value: function initGeometry() {
-      this.model = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+      this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
         wireframe: false,
         color: 0xffffff
       }));
-      return this.model;
+      return this.geom;
     }
   }, {
     key: "update",
     value: function update(dt) {
       if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
-      this.updateByDirection(dt, this.model);
+      this.updateByDirection(dt);
 
       if (this.room) {
         if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {
@@ -34689,10 +34696,6 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _get(target, property, receiver) { if (typeof Reflect !== "undefined" && Reflect.get) { _get = Reflect.get; } else { _get = function _get(target, property, receiver) { var base = _superPropBase(target, property); if (!base) return; var desc = Object.getOwnPropertyDescriptor(base, property); if (desc.get) { return desc.get.call(receiver); } return desc.value; }; } return _get(target, property, receiver || target); }
-
-function _superPropBase(object, property) { while (!Object.prototype.hasOwnProperty.call(object, property)) { object = _getPrototypeOf(object); if (object === null) break; } return object; }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -34767,7 +34770,6 @@ var Hall = function Hall(scene, player) {
     width: width,
     depth: depth
   };
-  console.log(this.pos, this.size);
   this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
     color: 0x888888,
     side: THREE.DoubleSide
@@ -34838,7 +34840,6 @@ function () {
       this.floor.position.x = -this.pos.x;
       this.floor.position.z = -this.pos.z;
       group.add(this.floor);
-      console.log(group);
     }
   }, {
     key: "drawWalls",
@@ -34864,7 +34865,6 @@ function () {
       walls.forEach(function (w) {
         return group.add(w);
       });
-      console.log(group);
     }
   }, {
     key: "draw",
@@ -34874,13 +34874,15 @@ function () {
       this.drawWalls(group);
       group.position.x = this.pos.x;
       group.position.z = this.pos.z;
-      console.log(group);
       scene.add(group);
+      console.log('asdf', scene);
+      this.scene = scene;
+      console.log(this.scene);
     } //* Player
 
   }, {
-    key: "enter",
-    value: function enter(player) {
+    key: "entered",
+    value: function entered(player) {
       this.player = player;
     }
   }, {
@@ -34918,8 +34920,18 @@ function () {
   }, {
     key: "updateBullets",
     value: function updateBullets(dt) {
+      var _this3 = this;
+
       this.bullets.forEach(function (b) {
-        return b.update(dt);
+        b.update(dt);
+
+        for (var i = 0; i < _this3.enemies.length; i++) {
+          var e = _this3.enemies[i];
+
+          if (b.collides(e)) {
+            e.applyDamage(b.damage);
+          }
+        }
       });
     }
   }, {
@@ -34936,7 +34948,9 @@ function () {
   }, {
     key: "addBullet",
     value: function addBullet(bullet) {
+      console.log(this.scene);
       this.bullets.push(bullet);
+      bullet.draw(this.scene);
     }
   }, {
     key: "deleteBullet",
@@ -34959,50 +34973,64 @@ function (_Room) {
   _inherits(WaveRoom, _Room);
 
   function WaveRoom(level, size, pos) {
-    var _this3;
+    var _this4;
 
     _classCallCheck(this, WaveRoom);
 
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, level, size, pos));
-    _this3.enemies = [];
-    _this3.raycaster = new THREE.Raycaster();
-    _this3.mouse = {
+    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, level, size, pos));
+    _this4.enemies = [];
+    _this4.raycaster = new THREE.Raycaster();
+    _this4.mouse = {
       x: 0,
       y: 0
     };
 
-    _this3.generateWave();
+    _this4.generateWave();
 
-    return _this3;
+    return _this4;
   }
 
   _createClass(WaveRoom, [{
     key: "generateWave",
     value: function generateWave() {
-      var _this4 = this;
+      var _this5 = this;
 
       this.enemies = Array(5).fill(0).map(function (a) {
-        return new _entity.Creature(_this4, _this4.scene, {
-          x: Math.random() * _this4.size.width + _this4.pos.x,
-          z: Math.random() * _this4.size.depth + _this4.pos.z
+        return new _entity.Creature(_this5, {
+          x: Math.random() * _this5.size.width + _this5.pos.x,
+          z: Math.random() * _this5.size.depth + _this5.pos.z
         }, 2);
       });
     }
   }, {
+    key: "draw",
+    value: function draw(scene) {
+      var group = new THREE.Group();
+      this.drawFloor(group);
+      this.drawWalls(group);
+      this.enemies.map(function (a) {
+        return a.draw(scene);
+      });
+      group.position.x = this.pos.x;
+      group.position.z = this.pos.z;
+      scene.add(group);
+      this.scene = scene;
+    }
+  }, {
     key: "updateEnemies",
     value: function updateEnemies(dt) {
-      var _this5 = this;
+      var _this6 = this;
 
       this.enemies.forEach(function (e) {
         e.update(dt);
 
-        for (var i = 0; i < _this5.bullets.length; i++) {
-          var b = _this5.bullets[i];
+        for (var i = 0; i < _this6.bullets.length; i++) {
+          var b = _this6.bullets[i];
 
           if (b.collides(e)) {
-            _this5.deleteBullet(b);
+            _this6.deleteBullet(b);
 
-            _this5.deleteEnemy(e);
+            _this6.deleteEnemy(e);
 
             return;
           }
@@ -35017,15 +35045,13 @@ function (_Room) {
 
       if (i.length > 0) {
         var pt = i[0].point;
-        this.player.lookAt(pt);
-
-        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
-          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
-        }
+        this.player.lookAt(pt); // for (let i = 0; i < this.enemies.length; i++) {
+        //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
+        // }
       }
 
-      _get(_getPrototypeOf(WaveRoom.prototype), "update", this).call(this, dt);
-
+      this.updateBullets(dt);
+      this.updatePlayer(dt);
       this.updateEnemies(dt);
     }
   }, {
@@ -35059,6 +35085,7 @@ function () {
     _classCallCheck(this, Level);
 
     this.rooms = [];
+    this.currentRoom = null;
     this.player = null;
     this.halls = [];
     this.min = min;
@@ -35074,26 +35101,27 @@ function () {
       }, {
         x: -50,
         z: -50
-      }), []];
+      })];
+      this.currentRoom = this.rooms[0];
+      if (this.player) this.currentRoom.player = this.player;
+      this.player.enter(this.rooms[0]);
     }
   }, {
     key: "add",
     value: function add(player) {
       this.player = player;
+      if (this.currentRoom) this.currentRoom.player = player;
     }
   }, {
     key: "draw",
     value: function draw(scene) {
-      var drawRoom = function drawRoom(_ref6) {
-        var _ref7 = _slicedToArray(_ref6, 2),
-            room = _ref7[0],
-            neighbors = _ref7[1];
-
-        room.draw(scene);
-        (neighbors || []).map(drawRoom);
-      };
-
-      drawRoom(this.rooms);
+      // let drawRoom = ([room, neighbors]) => {
+      //     room.draw(scene);
+      //     (neighbors || []).map(drawRoom);
+      // }
+      this.rooms.map(function (a) {
+        return a.draw(scene);
+      });
       this.halls.forEach(function (a) {
         return a.draw(scene);
       });
@@ -35103,6 +35131,7 @@ function () {
     key: "update",
     value: function update(dt) {
       this.player.update(dt);
+      this.currentRoom.update(dt);
     }
   }, {
     key: "keyDown",
@@ -35118,6 +35147,7 @@ function () {
     key: "mouseMove",
     value: function mouseMove(evt) {
       if (this.player && this.player.mouseMove) this.player.mouseMove(evt);
+      this.currentRoom.mouseMove(evt);
     }
   }, {
     key: "mouseDown",
@@ -35219,25 +35249,22 @@ function () {
 }();
 
 exports.Weapon = Weapon;
-var count = 0;
 
 var Bullet =
 /*#__PURE__*/
 function (_Entity) {
   _inherits(Bullet, _Entity);
 
-  function Bullet(gun) {
+  function Bullet(gun, pos, angle) {
     var _this2;
 
-    var speed = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-    var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var size = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+    var speed = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
 
     _classCallCheck(this, Bullet);
 
-    console.log(gun);
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this));
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this, pos, angle, size, speed));
     _this2.gun = gun;
-    _this2.id = count++;
     _this2.room = _this2.gun.room;
     return _this2;
   }
@@ -35245,10 +35272,10 @@ function (_Entity) {
   _createClass(Bullet, [{
     key: "initGeometry",
     value: function initGeometry() {
-      this.bullet = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+      this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
         color: 0x8800000
       }));
-      return this.bullet;
+      return this.geom;
     }
   }, {
     key: "update",
@@ -35287,8 +35314,7 @@ function (_Weapon) {
   _createClass(RangedWeapon, [{
     key: "triggerCB",
     value: function triggerCB() {
-      console.log(this);
-      this.triggerListener("ranged", new Bullet(this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSpeed, this.bulletSize));
+      this.triggerListener("ranged", new Bullet(this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSize, this.bulletSpeed, this.damage));
     }
   }]);
 
