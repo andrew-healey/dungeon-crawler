@@ -6,7 +6,7 @@ import {
     Bullet
 } from './weapon.js';
 
-class Player {
+export class Player {
     constructor(scene, pos) {
         this.pos = pos;
         var geo = new THREE.BoxGeometry(1, 1, 1)
@@ -18,16 +18,68 @@ class Player {
         scene.add(box);
         this.box = box;
 
-        this.speed = 1;
+        this.room = null
+
+        this.speed = 30;
+        this.moving = {
+            x: 0,
+            z: 0,
+        };
     }
 
-    move(x, z, dt) {
-        this.pos.x += x * this.speed * dt;
-        this.pos.z += z * this.speed * dt;
+    mount(room) {
+        this.room = room;
+    }
+
+    moveX(x) {
+        this.moving.x = x;
+    }
+    moveZ(z) {
+        this.moving.z = z;
+    }
+
+    update(dt) {
+        this.pos.x += dt * this.moving.x * this.speed;
+        this.pos.z += dt * this.moving.z * this.speed;
+
+        if (this.room) {
+            if (this.pos.x > this.room.pos.x + this.room.size.width) this.pos.x = this.room.pos.x + this.room.size.width;
+            if (this.pos.z > this.room.pos.z + this.room.size.depth) this.pos.z = this.room.pos.z + this.room.size.depth;
+            if (this.pos.x < this.room.pos.x) this.pos.x = this.room.pos.x;
+            if (this.pos.z < this.room.pos.z) this.pos.z = this.room.pos.z;
+        }
+    }
+
+    keyDown(evt) {
+        let key = evt.code;
+        (({
+            'ArrowLeft': () => this.moveX(1),
+            'ArrowRight': () => this.moveX(-1),
+            'ArrowUp': () => this.moveZ(1),
+            'ArrowDown': () => this.moveZ(-1),
+            'KeyA': () => this.moveX(1),
+            'KeyD': () => this.moveX(-1),
+            'KeyW': () => this.moveZ(1),
+            'KeyS': () => this.moveZ(-1)
+        })[key] || (() => 1))();
+    }
+    keyUp(evt) {
+        console.log(evt);
+        let key = evt.code;
+        (({
+            'ArrowLeft': () => this.moveX(0),
+            'ArrowRight': () => this.moveX(0),
+            'ArrowUp': () => this.moveZ(0),
+            'ArrowDown': () => this.moveZ(0),
+            'KeyA': () => this.moveX(0),
+            'KeyD': () => this.moveX(0),
+            'KeyW': () => this.moveZ(0),
+            'KeyS': () => this.moveZ(0)
+        })[key] || (() => 1))();
     }
 }
 export class Room {
-    constructor(scene, size, pos) {
+    constructor(scene, player, size, pos) {
         this.scene = scene;
 
         this.activated = false;
@@ -42,25 +94,39 @@ export class Room {
 
         this.listeners = {};
 
-        this.player = null;
+        this.player = player;
         this.playerEntered = false;
 
         this.pos = pos;
         this.size = size;
 
+        let floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
+            color: 0x555555,
+            side: THREE.DoubleSide
+        }));
+        floor.rotateX(Math.PI / 2);
+        floor.position.y = -2;
+        floor.position.x = -pos.x;
+        floor.position.z = -pos.z;
+
         this.walls = new THREE.Group();
+        this.walls.add(floor);
+        // console.log(this.pos);
 
         let walls = [
             [0, 0, 1, 0],
             [0, 0, 0, 1],
             [0, 1, 1, 0],
             [1, 0, 0, 1],
-        ].map(([x, y, width, height]) => {
-            let geom = new THREE.BoxGeometry((width * size.width || 3), 5, (height * size.height || 3));
+        ].map(([x, z, width, depth], i) => {
+            // console.log(i)
+            let boxWidth = width * size.width;
+            let boxHeight = depth * size.depth;
+            let geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
             let wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
                 color: 0x00ff00,
             }));
-            wall.position.set(x * size.width, 0, y * size.height);
+            wall.position.set(x * size.width + boxWidth / 2 + (z * boxHeight), 0, z * size.depth + boxHeight / 2 + (x * boxWidth));
             return wall;
         });
         walls.forEach(w => this.walls.add(w));
@@ -90,8 +156,9 @@ export class Room {
     }
 
     //* Player
-    mountPlayer(player) {
+    mountPlayer() {
         this.playerEntered = true;
+        this.player.mount(this);
     }
     unmountPlayer() {
         this.playerEntered = false;
@@ -106,18 +173,26 @@ export class Room {
     }
 
     //*
-    handleEvent(evt) {
-        this.player.handleEvent(evt);
+    keyDown(evt) {
+        if (this.player) this.player.keyDown(evt);
+    }
+    keyUp(evt) {
+        if (this.player) this.player.keyUp(evt);
     }
 
     //*
 
-    draw() {
-        this.walls.position.x = this.pos.x - this.player.pos.x;
-        this.walls.position.z = this.pos.z - this.player.pos.z;
+    update(dt) {
+        if (this.player && this.playerEntered) {
+            this.player.update(dt);
+
+            this.walls.position.x = this.pos.x - this.player.pos.x;
+            this.walls.position.z = this.pos.z - this.player.pos.z;
+        }
     }
 
 }
+
 class NormalRoom extends Room {
     constructor(_difficulty) {
         this.enemies = [];

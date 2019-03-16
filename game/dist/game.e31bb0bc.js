@@ -34417,6 +34417,11 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 var Entity =
 /*#__PURE__*/
 function () {
+  /**
+   * Describes the Entity class, which handles movement, rendering and collision of objects.
+   * @constructor
+   * @param position {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
+   */
   function Entity(position, angle) {
     var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 
@@ -34444,8 +34449,25 @@ function () {
     value: function moveForward() {}
   }, {
     key: "onCollideWithWall",
-    value: function onCollideWithWall() {} // collides(entity) {}
+    value: function onCollideWithWall() {}
+    /**
+     * Determines if the entity is contacting the given entity.
+     * @param entity {Entity} - The entity with which this might be colliding.
+     */
 
+  }, {
+    key: "collidesWith",
+    value: function collidesWith(entity) {
+      var _this = this;
+
+      return Math.sqrt([0, "x",,
+      /*"y" */
+      "z"].reduce(function (old, i) {
+        return old + Math.pow([0, _this, entity].reduce(function (old, e) {
+          return old - e.position[i];
+        }), 2);
+      })) > entity.size + this.size;
+    }
   }]);
 
   return Entity;
@@ -34459,14 +34481,14 @@ function (_Entity) {
   _inherits(Creature, _Entity);
 
   function Creature(room, type, position) {
-    var _this;
+    var _this2;
 
     _classCallCheck(this, Creature);
 
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, position, Math.random() * 2 * Math.PI));
-    _this.type = type;
-    _this.room = room;
-    return _this;
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, position, Math.random() * 2 * Math.PI));
+    _this2.type = type;
+    _this2.room = room;
+    return _this2;
   }
 
   _createClass(Creature, [{
@@ -34504,15 +34526,15 @@ function (_Creature) {
   _inherits(Enemy, _Creature);
 
   function Enemy(seed, room) {
-    var _this2;
+    var _this3;
 
     _classCallCheck(this, Enemy);
 
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Enemy).call(this, room, 'enemy-' + seed));
-    _this2.seed = seed;
-    _this2.health = 10;
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(Enemy).call(this, room, 'enemy-' + seed));
+    _this3.seed = seed;
+    _this3.health = 10;
     ths;
-    return _this2;
+    return _this3;
   }
 
   _createClass(Enemy, [{
@@ -34732,7 +34754,7 @@ exports.MeleeWeapon = MeleeWeapon;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Room = void 0;
+exports.Room = exports.Player = void 0;
 
 var _seedRandom = _interopRequireDefault(require("seed-random"));
 
@@ -34787,25 +34809,125 @@ function () {
     var box = new THREE.Mesh(geo, mat);
     scene.add(box);
     this.box = box;
-    this.speed = 1;
+    this.room = null;
+    this.speed = 30;
+    this.moving = {
+      x: 0,
+      z: 0
+    };
   }
 
   _createClass(Player, [{
-    key: "move",
-    value: function move(x, z, dt) {
-      this.pos.x += x * this.speed * dt;
-      this.pos.z += z * this.speed * dt;
+    key: "mount",
+    value: function mount(room) {
+      this.room = room;
+    }
+  }, {
+    key: "moveX",
+    value: function moveX(x) {
+      this.moving.x = x;
+    }
+  }, {
+    key: "moveZ",
+    value: function moveZ(z) {
+      this.moving.z = z;
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      this.pos.x += dt * this.moving.x * this.speed;
+      this.pos.z += dt * this.moving.z * this.speed;
+
+      if (this.room) {
+        if (this.pos.x > this.room.pos.x + this.room.size.width) this.pos.x = this.room.pos.x + this.room.size.width;
+        if (this.pos.z > this.room.pos.z + this.room.size.depth) this.pos.z = this.room.pos.z + this.room.size.depth;
+        if (this.pos.x < this.room.pos.x) this.pos.x = this.room.pos.x;
+        if (this.pos.z < this.room.pos.z) this.pos.z = this.room.pos.z;
+      }
+    }
+  }, {
+    key: "keyDown",
+    value: function keyDown(evt) {
+      var _this = this;
+
+      var key = evt.code;
+      (({
+        'ArrowLeft': function ArrowLeft() {
+          return _this.moveX(1);
+        },
+        'ArrowRight': function ArrowRight() {
+          return _this.moveX(-1);
+        },
+        'ArrowUp': function ArrowUp() {
+          return _this.moveZ(1);
+        },
+        'ArrowDown': function ArrowDown() {
+          return _this.moveZ(-1);
+        },
+        'KeyA': function KeyA() {
+          return _this.moveX(1);
+        },
+        'KeyD': function KeyD() {
+          return _this.moveX(-1);
+        },
+        'KeyW': function KeyW() {
+          return _this.moveZ(1);
+        },
+        'KeyS': function KeyS() {
+          return _this.moveZ(-1);
+        }
+      })[key] || function () {
+        return 1;
+      })();
+    }
+  }, {
+    key: "keyUp",
+    value: function keyUp(evt) {
+      var _this2 = this;
+
+      console.log(evt);
+      var key = evt.code;
+      (({
+        'ArrowLeft': function ArrowLeft() {
+          return _this2.moveX(0);
+        },
+        'ArrowRight': function ArrowRight() {
+          return _this2.moveX(0);
+        },
+        'ArrowUp': function ArrowUp() {
+          return _this2.moveZ(0);
+        },
+        'ArrowDown': function ArrowDown() {
+          return _this2.moveZ(0);
+        },
+        'KeyA': function KeyA() {
+          return _this2.moveX(0);
+        },
+        'KeyD': function KeyD() {
+          return _this2.moveX(0);
+        },
+        'KeyW': function KeyW() {
+          return _this2.moveZ(0);
+        },
+        'KeyS': function KeyS() {
+          return _this2.moveZ(0);
+        }
+      })[key] || function () {
+        return 1;
+      })();
     }
   }]);
 
   return Player;
 }();
 
+exports.Player = Player;
+
 var Room =
 /*#__PURE__*/
 function () {
-  function Room(scene, size, pos) {
-    var _this = this;
+  function Room(scene, player, size, pos) {
+    var _this3 = this;
 
     _classCallCheck(this, Room);
 
@@ -34819,27 +34941,40 @@ function () {
       'w': null
     };
     this.listeners = {};
-    this.player = null;
+    this.player = player;
     this.playerEntered = false;
     this.pos = pos;
     this.size = size;
+    var floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
+      color: 0x555555,
+      side: THREE.DoubleSide
+    }));
+    floor.rotateX(Math.PI / 2);
+    floor.position.y = -2;
+    floor.position.x = -pos.x;
+    floor.position.z = -pos.z;
     this.walls = new THREE.Group();
-    var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref) {
+    this.walls.add(floor); // console.log(this.pos);
+
+    var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref, i) {
       var _ref2 = _slicedToArray(_ref, 4),
           x = _ref2[0],
-          y = _ref2[1],
+          z = _ref2[1],
           width = _ref2[2],
-          height = _ref2[3];
+          depth = _ref2[3];
 
-      var geom = new THREE.BoxGeometry(width * size.width || 3, 5, height * size.height || 3);
+      // console.log(i)
+      var boxWidth = width * size.width;
+      var boxHeight = depth * size.depth;
+      var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
       var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
         color: 0x00ff00
       }));
-      wall.position.set(x * size.width, 0, y * size.height);
+      wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
       return wall;
     });
     walls.forEach(function (w) {
-      return _this.walls.add(w);
+      return _this3.walls.add(w);
     });
     scene.add(this.walls);
     console.log(this.walls);
@@ -34858,7 +34993,7 @@ function () {
   }, {
     key: "emit",
     value: function emit(emitter, event) {
-      var _this2 = this;
+      var _this4 = this;
 
       for (var _len = arguments.length, data = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
         data[_key - 2] = arguments[_key];
@@ -34870,7 +35005,7 @@ function () {
             name: event,
             data: data,
             emitter: emitter,
-            room: _this2
+            room: _this4
           }].concat(data));
         });
       }
@@ -34878,8 +35013,9 @@ function () {
 
   }, {
     key: "mountPlayer",
-    value: function mountPlayer(player) {
+    value: function mountPlayer() {
       this.playerEntered = true;
+      this.player.mount(this);
     }
   }, {
     key: "unmountPlayer",
@@ -34894,16 +35030,24 @@ function () {
     } //*
 
   }, {
-    key: "handleEvent",
-    value: function handleEvent(evt) {
-      this.player.handleEvent(evt);
+    key: "keyDown",
+    value: function keyDown(evt) {
+      if (this.player) this.player.keyDown(evt);
+    }
+  }, {
+    key: "keyUp",
+    value: function keyUp(evt) {
+      if (this.player) this.player.keyUp(evt);
     } //*
 
   }, {
-    key: "draw",
-    value: function draw() {
-      this.walls.position.x = this.pos.x - this.player.pos.x;
-      this.walls.position.z = this.pos.z - this.player.pos.z;
+    key: "update",
+    value: function update(dt) {
+      if (this.player && this.playerEntered) {
+        this.player.update(dt);
+        this.walls.position.x = this.pos.x - this.player.pos.x;
+        this.walls.position.z = this.pos.z - this.player.pos.z;
+      }
     }
   }]);
 
@@ -34918,13 +35062,13 @@ function (_Room) {
   _inherits(NormalRoom, _Room);
 
   function NormalRoom(_difficulty) {
-    var _this3;
+    var _this5;
 
     _classCallCheck(this, NormalRoom);
 
-    _this3.enemies = [];
-    _this3.bullets = [];
-    return _possibleConstructorReturn(_this3);
+    _this5.enemies = [];
+    _this5.bullets = [];
+    return _possibleConstructorReturn(_this5);
   } //* Generation/reset
 
 
@@ -34936,10 +35080,10 @@ function (_Room) {
   }, {
     key: "generateWave",
     value: function generateWave(number) {
-      var _this4 = this;
+      var _this6 = this;
 
       this.entities = Array(number).fill(seed()).map(function (s) {
-        return new Entity(_this4);
+        return new Entity(_this6);
       });
     } //* draw+update;
 
@@ -34970,11 +35114,11 @@ function (_Room2) {
   _inherits(EntryRoom, _Room2);
 
   function EntryRoom(seed) {
-    var _this5;
+    var _this7;
 
     _classCallCheck(this, EntryRoom);
 
-    return _possibleConstructorReturn(_this5);
+    return _possibleConstructorReturn(_this7);
   }
 
   _createClass(EntryRoom, [{
@@ -35009,14 +35153,23 @@ var renderer = new THREE.WebGLRenderer({
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(50, 16 / 9, 1, 1000);
 var controls = new OrbitControls(camera);
-var geo = new THREE.BoxGeometry(1, 1, 1);
-var mat = new THREE.MeshBasicMaterial({
-  wireframe: true,
-  color: 0xffffff
-});
-var box = new THREE.Mesh(geo, mat);
-scene.add(box);
-camera.position.set(0, 1, -3);
+controls.enableKeys = false;
+controls.enabled = false;
+controls.maxPolarAngle = Math.PI / 2;
+controls.minDistance = 10;
+controls.maxDistance = 200;
+controls.minAzimuthAngle = 0; // radians
+
+controls.maxAzimuthAngle = Math.PI; // radians
+// var geo = new THREE.BoxGeometry(1, 1, 1)
+// var mat = new THREE.MeshBasicMaterial({
+//     wireframe: true,
+//     color: 0xffffff
+// });
+// var box = new THREE.Mesh(geo, mat)
+// scene.add(box);
+
+camera.position.set(0, 40, -80);
 camera.lookAt(new THREE.Vector3());
 var start = performance.now();
 var prev = performance.now();
@@ -35024,30 +35177,40 @@ var light = new THREE.AmbientLight(0x404040); // soft white light
 
 scene.add(light); // console.log();
 
-var floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000, 2000, 8, 8), new THREE.MeshBasicMaterial({
-  color: 0x555555,
-  side: THREE.DoubleSide
-}));
-floor.rotateX(Math.PI / 2);
-floor.position.z = -10;
-var room = new _game.Room(scene, {
-  width: 10,
-  height: 10
-}, {
-  x: -5,
-  y: -5
+var player = new _game.Player(scene, {
+  x: 0,
+  z: 0
 });
-scene.add(floor);
+var room = new _game.Room(scene, player, {
+  width: 100,
+  depth: 100
+}, {
+  x: -50,
+  z: -50
+});
+room.mountPlayer();
+console.log(room.player); // scene.add(floor);
+
 window.addEventListener('resize', onWindowResize, false);
 container.appendChild(renderer.domElement);
 animate();
 onWindowResize();
+document.body.addEventListener('keydown', function (evt) {
+  if (evt.key === 'Control') controls.enabled = true;
+  room.keyDown(evt);
+});
+document.body.addEventListener('keyup', function (evt) {
+  if (evt.key === 'Control') controls.enabled = false;
+  room.keyUp(evt);
+});
 
 function animate() {
   var current = performance.now();
-  var dt = current - prev;
+  var dt = (current - prev) / 1000;
+  room.update(dt);
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
+  prev = current;
 }
 
 function onWindowResize() {
@@ -35082,7 +35245,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63354" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50532" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
