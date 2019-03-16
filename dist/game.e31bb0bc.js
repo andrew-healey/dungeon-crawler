@@ -34463,7 +34463,7 @@ function (_Entity) {
       setInterval(function () {
         _this3.boxes.forEach(function (b) {
           console.log(b);
-          b.rotation.x += Math.random() - 0.5;
+          b.rotation.x += (Math.random() - 0.5) / 20;
           b.rotation.y += Math.random() - 0.5;
           b.rotation.z += Math.random() - 0.5;
         }); // this.box2.rotation.x += 0.01
@@ -34916,9 +34916,7 @@ function () {
       group.position.x = this.pos.x;
       group.position.z = this.pos.z;
       scene.add(group);
-      console.log('asdf', scene);
       this.scene = scene;
-      console.log(this.scene);
     } //* Player
 
   }, {
@@ -34989,7 +34987,7 @@ function () {
   }, {
     key: "addBullet",
     value: function addBullet(bullet) {
-      console.log(this.scene);
+      // console.log(this.scene);
       this.bullets.push(bullet);
       bullet.draw(this.scene);
     }
@@ -35113,7 +35111,7 @@ function (_Room) {
   }, {
     key: "deleteEnemy",
     value: function deleteEnemy(enemy) {
-      console.log(enemy);
+      // console.log(enemy);
       this.scene.remove(enemy.geom);
       enemy.geom.geometry.dispose();
       enemy.geom.material.dispose();
@@ -35124,6 +35122,18 @@ function (_Room) {
     value: function mouseMove(evt) {
       this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
       this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    }
+  }, {
+    key: "melee",
+    value: function melee(weapon) {
+      // let pos = weapon.player.pos;
+      for (var i = 0; i < this.enemies.length; i++) {
+        var e = this.enemies[i];
+
+        if (e.dist(weapon.player) <= weapon.radius && Math.abs(weapon.player.angleTo(e)) < weapon.range) {
+          e.takeDamage(weapon.damage);
+        }
+      }
     }
   }]);
 
@@ -35447,6 +35457,7 @@ scene.add(light); //#endregion
 //#region Player
 
 var gun = new _weapon.RangedWeapon('asdf', 2, 60, 7.5, 260);
+var sword = new _weapon.MeleeWeapon('asdf2', 10, 2 * Math.PI, 20, 100);
 var player = new _entity.Player(camera, {
   x: 0,
   z: 0
@@ -35457,6 +35468,7 @@ var level = new _game.Level({
 }); // player.enter(room1);
 
 player.equip(gun);
+player.equip(sword);
 level.add(player);
 level.generate();
 level.draw(scene);

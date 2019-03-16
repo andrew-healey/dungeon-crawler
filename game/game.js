@@ -145,9 +145,7 @@ export class Room {
         group.position.z = this.pos.z;
 
         scene.add(group);
-        console.log('asdf', scene);
         this.scene = scene;
-        console.log(this.scene);
     }
 
     //* Player
@@ -197,7 +195,7 @@ export class Room {
     }
 
     addBullet(bullet) {
-        console.log(this.scene);
+        // console.log(this.scene);
         this.bullets.push(bullet);
         bullet.draw(this.scene);
     }
@@ -292,7 +290,7 @@ export class WaveRoom extends Room {
     }
 
     deleteEnemy(enemy) {
-        console.log(enemy);
+        // console.log(enemy);
         this.scene.remove(enemy.geom);
         enemy.geom.geometry.dispose();
         enemy.geom.material.dispose();
@@ -302,6 +300,16 @@ export class WaveRoom extends Room {
     mouseMove(evt) {
         this.mouse.x = (evt.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    melee(weapon) {
+        // let pos = weapon.player.pos;
+        for (let i = 0; i < this.enemies.length; i++) {
+            let e = this.enemies[i];
+            if (e.dist(weapon.player) <= weapon.radius && Math.abs(weapon.player.angleTo(e)) < weapon.range) {
+                e.takeDamage(weapon.damage);
+            }
+        }
     }
 }
 

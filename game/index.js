@@ -12,7 +12,8 @@ import {
     Player
 } from './entity.js';
 import {
-    RangedWeapon
+    RangedWeapon,
+    MeleeWeapon
 } from './weapon.js'
 
 //#region Setup
@@ -39,6 +40,7 @@ scene.add(light);
 
 //#region Player
 let gun = new RangedWeapon('asdf', 2, 60, 7.5, 260);
+let sword = new MeleeWeapon('asdf2', 10, 2 * Math.PI, 20, 100);
 let player = new Player(camera, {
     x: 0,
     z: 0
@@ -50,6 +52,7 @@ let level = new Level({
 
 // player.enter(room1);
 player.equip(gun);
+player.equip(sword);
 level.add(player);
 level.generate();
 level.draw(scene);

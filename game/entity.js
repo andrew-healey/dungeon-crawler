@@ -168,7 +168,7 @@ export class Player extends Entity {
         setInterval(() => {
             this.boxes.forEach(b => {
                 console.log(b);
-                b.rotation.x += (Math.random() - 0.5);
+                b.rotation.x += (Math.random() - 0.5) / 20;
                 b.rotation.y += (Math.random() - 0.5);
                 b.rotation.z += (Math.random() - 0.5);
             })
