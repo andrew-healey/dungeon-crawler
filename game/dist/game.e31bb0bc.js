@@ -34394,7 +34394,11 @@ mixkey(Math.random(), pool);
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Enemy = exports.Creature = exports.Entity = void 0;
+exports.Creature = exports.Player = exports.Entity = void 0;
+
+var THREE = _interopRequireWildcard(require("three"));
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
@@ -34420,53 +34424,120 @@ function () {
   /**
    * Describes the Entity class, which handles movement, rendering and collision of objects.
    * @constructor
-   * @param position {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
+   * @param pos {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
    */
-  function Entity(position, angle) {
-    var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-
+  function Entity(scene, pos, angle, size, speed) {
     _classCallCheck(this, Entity);
 
-    this.position = position;
+    this.room = null;
+    this.pos = pos;
+    this.vel = {
+      x: 0,
+      z: 0
+    };
     this.angle = angle;
     this.size = size;
+    this.speed = speed;
+    this.scene = scene;
+    this.initGeometry && this.scene.add(this.initGeometry());
   }
 
   _createClass(Entity, [{
+    key: "mount",
+    value: function mount(room) {
+      this.room = room;
+    }
+  }, {
+    key: "unmount",
+    value: function unmount() {
+      this.room = null;
+    }
+  }, {
+    key: "walkX",
+    value: function walkX(x) {
+      this.vel.x = x;
+    }
+  }, {
+    key: "walkZ",
+    value: function walkZ(z) {
+      this.vel.z = z;
+    }
+  }, {
+    key: "moveX",
+    value: function moveX(x) {
+      this.pos.x = x;
+    }
+  }, {
+    key: "moveZ",
+    value: function moveZ(z) {
+      this.pos.z = z;
+    }
+  }, {
+    key: "lookAt",
+    value: function lookAt(pos) {
+      this.angle = -Math.atan2(pos.x, pos.z);
+    }
+  }, {
+    key: "unit",
+    value: function unit() {
+      return {
+        x: Math.cos(this.angle),
+        z: Math.sin(this.angle)
+      };
+    }
+  }, {
+    key: "updateByDirection",
+    value: function updateByDirection(dt) {
+      var unit = this.unit();
+      this.pos.x += dt * unit.x * this.speed;
+      this.pos.z += dt * unit.z * this.speed; // mesh.position.x += dt * unit.x * this.speed;
+      // mesh.position.z += dt * unit.z * this.speed;
+
+      return {
+        x: dt * unit.x * this.speed,
+        z: dt * unit.z * this.speed
+      };
+    }
+  }, {
+    key: "updateByVelocity",
+    value: function updateByVelocity(dt, mesh) {
+      this.pos.x += dt * this.vel.x * this.speed;
+      this.pos.z += dt * this.vel.z * this.speed;
+      return {
+        x: dt * this.vel.x * this.speed,
+        z: dt * this.vel.z * this.speed
+      };
+    }
+  }, {
     key: "draw",
     value: function draw() {}
   }, {
     key: "update",
     value: function update() {}
-  }, {
-    key: "unit",
-    value: function unit() {}
-  }, {
-    key: "lookAt",
-    value: function lookAt() {}
-  }, {
-    key: "moveForward",
-    value: function moveForward() {}
-  }, {
-    key: "onCollideWithWall",
-    value: function onCollideWithWall() {}
     /**
      * Determines if the entity is contacting the given entity.
      * @param entity {Entity} - The entity with which this might be colliding.
      */
 
   }, {
-    key: "collidesWith",
-    value: function collidesWith(entity) {
+    key: "dist",
+    value: function dist(entity) {
       var _this = this;
 
-      return Math.sqrt([0, "x",,
-      /*"y" */
-      "z"].reduce(function (old, i) {
-        return old + Math.pow([0, _this, entity].reduce(function (old, e) {
-          return old - e.position[i];
-        }), 2);
-      })) > entity.size + this.size;
+      return Math.sqrt(['x', 'z'].reduce(function (a, b) {
+        return a + Math.pow(_this.pos[b] - entity.pos[b], 2);
+      }, 0));
+    }
+  }, {
+    key: "collides",
+    value: function collides(entity) {
+      console.log(this.dist(entity), this.size + entity.size);
+      return this.dist(entity) <= this.size + entity.size;
+    }
+  }, {
+    key: "angleTo",
+    value: function angleTo(pt) {
+      return -Math.atan2(pt.x, pt.z) - this.angle;
     }
   }]);
 
@@ -34475,43 +34546,248 @@ function () {
 
 exports.Entity = Entity;
 
-var Creature =
+var Player =
 /*#__PURE__*/
 function (_Entity) {
-  _inherits(Creature, _Entity);
+  _inherits(Player, _Entity);
 
-  function Creature(room, type, position) {
+  function Player(scene, camera, pos) {
     var _this2;
 
-    _classCallCheck(this, Creature);
+    _classCallCheck(this, Player);
 
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, position, Math.random() * 2 * Math.PI));
-    _this2.type = type;
-    _this2.room = room;
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Player).call(this, scene, pos, 0, 3, 30));
+    _this2.camera = camera;
+
+    _this2.camera.lookAt(_this2.box.position);
+
+    _this2.camera.controls.update();
+
+    _this2.weapon = null;
+    _this2.triggering = false;
+    var material = new THREE.LineBasicMaterial({
+      color: 0x0000ff
+    }); // window.setInterval(() => {
+    //     this.angle += 0.001;
+    // }, 1);
+
     return _this2;
   }
 
-  _createClass(Creature, [{
-    key: "draw",
-    value: function draw() {}
-  }, {
-    key: "update",
-    value: function update() {}
-  }, {
-    key: "on",
-    value: function on(event, func) {
-      this.room.on(event, func.bind(this));
+  _createClass(Player, [{
+    key: "initGeometry",
+    value: function initGeometry() {
+      this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        wireframe: true,
+        color: 0xffffff
+      }));
+      this.box.position.set(this.pos.x, 0, this.pos.z);
+      return this.box;
     }
   }, {
-    key: "emit",
-    value: function emit(event) {
-      var _this$room;
+    key: "mountWeapon",
+    value: function mountWeapon(weapon) {
+      this.weapon = weapon;
+      weapon.mount(this);
+    }
+  }, {
+    key: "unmountWeapon",
+    value: function unmountWeapon() {
+      this.weapon = null;
+      weapon.unmount(this);
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      var cameraOffset = {
+        x: this.camera.position.x - this.pos.x,
+        z: this.camera.position.z - this.pos.z
+      };
+      var p = Object.assign({}, this.pos);
+      this.updateByVelocity(dt, this.box);
 
-      for (var _len = arguments.length, data = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        data[_key - 1] = arguments[_key];
+      if (this.room) {
+        if (this.pos.x > this.room.pos.x + this.room.size.width) this.pos.x = this.room.pos.x + this.room.size.width;
+        if (this.pos.z > this.room.pos.z + this.room.size.depth) this.pos.z = this.room.pos.z + this.room.size.depth;
+        if (this.pos.x < this.room.pos.x) this.pos.x = this.room.pos.x;
+        if (this.pos.z < this.room.pos.z) this.pos.z = this.room.pos.z;
       }
 
-      (_this$room = this.room).emit.apply(_this$room, [this, event].concat(data));
+      this.box.position.x = this.pos.x;
+      this.box.position.z = this.pos.z;
+      this.box.rotation.y = -this.angle;
+      if (this.weapon) this.weapon.update(dt);
+      this.camera.position.set(cameraOffset.x + this.pos.x, this.camera.position.y, cameraOffset.z + this.pos.z);
+      this.camera.controls.update();
+    }
+  }, {
+    key: "trigger",
+    value: function trigger(v) {
+      this.weapon.triggering = v;
+    }
+  }, {
+    key: "keyDown",
+    value: function keyDown(evt) {
+      var _this3 = this;
+
+      var key = evt.code;
+      (({
+        'ArrowLeft': function ArrowLeft() {
+          return _this3.walkX(1);
+        },
+        'ArrowRight': function ArrowRight() {
+          return _this3.walkX(-1);
+        },
+        'ArrowUp': function ArrowUp() {
+          return _this3.walkZ(1);
+        },
+        'ArrowDown': function ArrowDown() {
+          return _this3.walkZ(-1);
+        },
+        'KeyA': function KeyA() {
+          return _this3.walkX(1);
+        },
+        'KeyD': function KeyD() {
+          return _this3.walkX(-1);
+        },
+        'KeyW': function KeyW() {
+          return _this3.walkZ(1);
+        },
+        'KeyS': function KeyS() {
+          return _this3.walkZ(-1);
+        },
+        'Space': function Space() {
+          return _this3.weapon && _this3.trigger(true);
+        }
+      })[key] || function () {
+        return 1;
+      })();
+    }
+  }, {
+    key: "keyUp",
+    value: function keyUp(evt) {
+      var _this4 = this;
+
+      var key = evt.code;
+      (({
+        'ArrowLeft': function ArrowLeft() {
+          return _this4.walkX(0);
+        },
+        'ArrowRight': function ArrowRight() {
+          return _this4.walkX(0);
+        },
+        'ArrowUp': function ArrowUp() {
+          return _this4.walkZ(0);
+        },
+        'ArrowDown': function ArrowDown() {
+          return _this4.walkZ(0);
+        },
+        'KeyA': function KeyA() {
+          return _this4.walkX(0);
+        },
+        'KeyD': function KeyD() {
+          return _this4.walkX(0);
+        },
+        'KeyW': function KeyW() {
+          return _this4.walkZ(0);
+        },
+        'KeyS': function KeyS() {
+          return _this4.walkZ(0);
+        },
+        'Space': function Space() {
+          return _this4.weapon && _this4.trigger(false);
+        }
+      })[key] || function () {
+        return 1;
+      })();
+    }
+  }, {
+    key: "mouseDown",
+    value: function mouseDown(evt) {
+      this.weapon && this.trigger(true);
+    }
+  }, {
+    key: "mouseUp",
+    value: function mouseUp(evt) {
+      this.weapon && this.trigger(false);
+    }
+  }]);
+
+  return Player;
+}(Entity);
+
+exports.Player = Player;
+
+var Creature =
+/*#__PURE__*/
+function (_Entity2) {
+  _inherits(Creature, _Entity2);
+
+  function Creature(room, scene, pos, size) {
+    var _this5;
+
+    _classCallCheck(this, Creature);
+
+    _this5 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, scene, pos, Math.random() * Math.PI * 2, size, 20));
+    _this5.room = room;
+    return _this5;
+  }
+
+  _createClass(Creature, [{
+    key: "initGeometry",
+    value: function initGeometry() {
+      this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        wireframe: false,
+        color: 0xffffff
+      }));
+      this.box.position.set(this.pos.x, 0, this.pos.z);
+      return this.box;
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
+      this.updateByDirection(dt, this.box);
+
+      if (this.room) {
+        if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {
+          this.pos.x = this.room.pos.x + this.room.size.width - 3;
+          var a = this.unit();
+          a.x = -a.x;
+          this.lookAt(a);
+        }
+
+        if (this.pos.z > this.room.pos.z + this.room.size.depth - 3) {
+          this.pos.z = this.room.pos.z + this.room.size.depth - 3;
+
+          var _a = this.unit();
+
+          _a.z = -_a.z;
+          this.lookAt(_a);
+        }
+
+        if (this.pos.x < this.room.pos.x + 3) {
+          this.pos.x = this.room.pos.x + 3;
+
+          var _a2 = this.unit();
+
+          _a2.x = -_a2.x;
+          this.lookAt(_a2);
+        }
+
+        if (this.pos.z < this.room.pos.z + 3) {
+          this.pos.z = this.room.pos.z + 3;
+
+          var _a3 = this.unit();
+
+          _a3.z = -_a3.z;
+          this.lookAt(_a3);
+        }
+      }
+
+      this.box.position.x = this.pos.x;
+      this.box.position.z = this.pos.z;
+      this.box.rotation.y = -this.angle;
     }
   }]);
 
@@ -34519,248 +34795,19 @@ function (_Entity) {
 }(Entity);
 
 exports.Creature = Creature;
-
-var Enemy =
-/*#__PURE__*/
-function (_Creature) {
-  _inherits(Enemy, _Creature);
-
-  function Enemy(seed, room) {
-    var _this3;
-
-    _classCallCheck(this, Enemy);
-
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(Enemy).call(this, room, 'enemy-' + seed));
-    _this3.seed = seed;
-    _this3.health = 10;
-    ths;
-    return _this3;
-  }
-
-  _createClass(Enemy, [{
-    key: "handleMelee",
-    value: function handleMelee(x, y, weapon, direction) {}
-  }, {
-    key: "draw",
-    value: function draw() {}
-  }]);
-
-  return Enemy;
-}(Creature);
-
-exports.Enemy = Enemy;
-},{}],"weapon.js":[function(require,module,exports) {
+},{"three":"../node_modules/three/build/three.module.js"}],"game.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.MeleeWeapon = exports.RangedWeapon = exports.Bullet = exports.Weapon = void 0;
-
-var _entity = require("./entity.js");
-
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
-
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-//TODO:
-
-/*
-    - Draw Bullet
-    - Draw Melee
-    - Draw Ranged
-
-*/
-var Weapon =
-/*#__PURE__*/
-function () {
-  function Weapon(name, _ref) {
-    var damage = _ref.damage,
-        speed = _ref.speed;
-
-    _classCallCheck(this, Weapon);
-
-    this.name = name;
-    this.type = "weapon";
-    this.damage = damage;
-    this.speed = speed;
-    this.enabled = true;
-    this.triggerListener = null;
-    this.player = null;
-    this.triggerCB = null;
-    this.modifiers = [];
-  }
-
-  _createClass(Weapon, [{
-    key: "mount",
-    value: function mount(player) {
-      this.player = player;
-    }
-  }, {
-    key: "unmount",
-    value: function unmount() {
-      this.player = null;
-    }
-  }, {
-    key: "onTrigger",
-    value: function onTrigger(cb) {
-      this.triggerListener = cb;
-    }
-  }, {
-    key: "trigger",
-    value: function trigger() {
-      var _this = this;
-
-      if (this.enabled && this.player) {
-        this.triggerListener();
-        this.enabled = false;
-        setTimeout(function () {
-          _this.enabled = true;
-        }, 1000 / this.speed);
-      }
-    }
-  }]);
-
-  return Weapon;
-}();
-
-exports.Weapon = Weapon;
-
-var Bullet =
-/*#__PURE__*/
-function (_Entity) {
-  _inherits(Bullet, _Entity);
-
-  function Bullet(gun, position, angle, _ref2) {
-    var _this2;
-
-    var _ref2$speed = _ref2.speed,
-        speed = _ref2$speed === void 0 ? 1 : _ref2$speed,
-        _ref2$size = _ref2.size,
-        size = _ref2$size === void 0 ? 1 : _ref2$size;
-
-    _classCallCheck(this, Bullet);
-
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this, position, angle, size));
-    _this2.speed = speed;
-    _this2.gun = gun;
-    return _this2;
-  }
-
-  _createClass(Bullet, [{
-    key: "update",
-    value: function update(dt) {
-      this.moveForward(dt * this.speed);
-    }
-  }, {
-    key: "onCollideWithWall",
-    value: function onCollideWithWall() {}
-  }]);
-
-  return Bullet;
-}(_entity.Entity);
-
-exports.Bullet = Bullet;
-
-var RangedWeapon =
-/*#__PURE__*/
-function (_Weapon) {
-  _inherits(RangedWeapon, _Weapon);
-
-  function RangedWeapon(name, _ref3) {
-    var _this3;
-
-    var damage = _ref3.damage,
-        _ref3$speed = _ref3.speed,
-        speed = _ref3$speed === void 0 ? 1 : _ref3$speed,
-        _ref3$bulletSize = _ref3.bulletSize,
-        bulletSize = _ref3$bulletSize === void 0 ? 5 : _ref3$bulletSize,
-        _ref3$bulletSpeed = _ref3.bulletSpeed,
-        bulletSpeed = _ref3$bulletSpeed === void 0 ? 1 : _ref3$bulletSpeed;
-
-    _classCallCheck(this, RangedWeapon);
-
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(RangedWeapon).call(this, name, damage));
-    _this3.speed = speed;
-    _this3.bulletSize = bulletSize;
-    _this3.bulletSpeed = bulletSpeed;
-    return _this3;
-  }
-
-  _createClass(RangedWeapon, [{
-    key: "triggerCB",
-    value: function triggerCB() {
-      this.triggerListener("ranged", new Bullet(this, this.position, this.angle, {
-        size: this.bulletSize,
-        speed: this.bulletSpeed
-      }));
-    }
-  }]);
-
-  return RangedWeapon;
-}(Weapon);
-
-exports.RangedWeapon = RangedWeapon;
-
-var MeleeWeapon =
-/*#__PURE__*/
-function (_Weapon2) {
-  _inherits(MeleeWeapon, _Weapon2);
-
-  function MeleeWeapon(name, _ref4) {
-    var _this4;
-
-    var damage = _ref4.damage,
-        range = _ref4.range,
-        radius = _ref4.radius,
-        speed = _ref4.speed;
-
-    _classCallCheck(this, MeleeWeapon);
-
-    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(MeleeWeapon).call(this, name, damage));
-    _this4.range = range;
-    _this4.radius = radius;
-    return _this4;
-  }
-
-  _createClass(MeleeWeapon, [{
-    key: "triggerCB",
-    value: function triggerCB() {
-      this.triggerListener("melee", this);
-    }
-  }]);
-
-  return MeleeWeapon;
-}(Weapon);
-
-exports.MeleeWeapon = MeleeWeapon;
-},{"./entity.js":"entity.js"}],"game.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Room = exports.Player = void 0;
+exports.WaveRoom = exports.Room = exports.Hall = void 0;
 
 var _seedRandom = _interopRequireDefault(require("seed-random"));
 
 var THREE = _interopRequireWildcard(require("three"));
 
-var _weapon = require("./weapon.js");
+var _entity = require("./entity.js");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -34771,6 +34818,8 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
@@ -34788,152 +34837,57 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var Player =
-/*#__PURE__*/
-function () {
-  function Player(scene, pos) {
-    _classCallCheck(this, Player);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-    this.pos = pos;
-    var geo = new THREE.BoxGeometry(1, 1, 1);
-    var mat = new THREE.MeshBasicMaterial({
-      wireframe: true,
-      color: 0xffffff
-    });
-    var box = new THREE.Mesh(geo, mat);
-    scene.add(box);
-    this.box = box;
-    this.room = null;
-    this.speed = 30;
-    this.moving = {
-      x: 0,
-      z: 0
-    };
+// import {
+//     Player
+// } from './'
+// export RangedWeapon;
+var Hall = function Hall(scene, player, size, from, to, vertical) {
+  _classCallCheck(this, Hall);
+
+  if (vertical) {//     this.size = {
+    //         width: size,
+    //         depth: from.pos.z > to.pos.z ?
+    //             from.pos.z - from.size.depth - to.pos.z : to.pos.z - to.size.depth - from.pos.z
+    //     }
+    //     this.pos = {
+    //         z: from.pos.z > to.pos.z ?
+    //             from.pos.z - from.size.depth - to.pos.z : to.pos.z - to.size.depth - from.pos.z,
+    //         x:
+    //     }
+    // } else {
+    //     this.size = {
+    //         depth: size,
+    //         width: from.pos.x > to.pos.x ?
+    //             from.pos.x - from.size.width - to.pos.x : to.pos.x - to.size.width - from.pos.x
+    //     }
+    //     this.pos = {
+    //         x: from.pos.x > to.pos.x ?
+    //             from.pos.x - from.size.width - to.pos.x : to.pos.x - to.size.width - from.pos.x
+    //         z:
+    //     }
   }
+};
 
-  _createClass(Player, [{
-    key: "mount",
-    value: function mount(room) {
-      this.room = room;
-    }
-  }, {
-    key: "moveX",
-    value: function moveX(x) {
-      this.moving.x = x;
-    }
-  }, {
-    key: "moveZ",
-    value: function moveZ(z) {
-      this.moving.z = z;
-    }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      this.pos.x += dt * this.moving.x * this.speed;
-      this.pos.z += dt * this.moving.z * this.speed;
-
-      if (this.room) {
-        if (this.pos.x > this.room.pos.x + this.room.size.width) this.pos.x = this.room.pos.x + this.room.size.width;
-        if (this.pos.z > this.room.pos.z + this.room.size.depth) this.pos.z = this.room.pos.z + this.room.size.depth;
-        if (this.pos.x < this.room.pos.x) this.pos.x = this.room.pos.x;
-        if (this.pos.z < this.room.pos.z) this.pos.z = this.room.pos.z;
-      }
-    }
-  }, {
-    key: "keyDown",
-    value: function keyDown(evt) {
-      var _this = this;
-
-      var key = evt.code;
-      (({
-        'ArrowLeft': function ArrowLeft() {
-          return _this.moveX(1);
-        },
-        'ArrowRight': function ArrowRight() {
-          return _this.moveX(-1);
-        },
-        'ArrowUp': function ArrowUp() {
-          return _this.moveZ(1);
-        },
-        'ArrowDown': function ArrowDown() {
-          return _this.moveZ(-1);
-        },
-        'KeyA': function KeyA() {
-          return _this.moveX(1);
-        },
-        'KeyD': function KeyD() {
-          return _this.moveX(-1);
-        },
-        'KeyW': function KeyW() {
-          return _this.moveZ(1);
-        },
-        'KeyS': function KeyS() {
-          return _this.moveZ(-1);
-        }
-      })[key] || function () {
-        return 1;
-      })();
-    }
-  }, {
-    key: "keyUp",
-    value: function keyUp(evt) {
-      var _this2 = this;
-
-      console.log(evt);
-      var key = evt.code;
-      (({
-        'ArrowLeft': function ArrowLeft() {
-          return _this2.moveX(0);
-        },
-        'ArrowRight': function ArrowRight() {
-          return _this2.moveX(0);
-        },
-        'ArrowUp': function ArrowUp() {
-          return _this2.moveZ(0);
-        },
-        'ArrowDown': function ArrowDown() {
-          return _this2.moveZ(0);
-        },
-        'KeyA': function KeyA() {
-          return _this2.moveX(0);
-        },
-        'KeyD': function KeyD() {
-          return _this2.moveX(0);
-        },
-        'KeyW': function KeyW() {
-          return _this2.moveZ(0);
-        },
-        'KeyS': function KeyS() {
-          return _this2.moveZ(0);
-        }
-      })[key] || function () {
-        return 1;
-      })();
-    }
-  }]);
-
-  return Player;
-}();
-
-exports.Player = Player;
+exports.Hall = Hall;
 
 var Room =
 /*#__PURE__*/
 function () {
   function Room(scene, player, size, pos) {
-    var _this3 = this;
+    var _this = this;
 
     _classCallCheck(this, Room);
 
     this.scene = scene;
+    this.bullets = [];
     this.activated = false;
-    this.unlocked = false;
+    this.unlocked = true;
     this.connections = {
       'n': null,
       's': null,
@@ -34942,20 +34896,20 @@ function () {
     };
     this.listeners = {};
     this.player = player;
+    player.mount(this);
     this.playerEntered = false;
     this.pos = pos;
     this.size = size;
-    var floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
+    this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
       color: 0x555555,
       side: THREE.DoubleSide
     }));
-    floor.rotateX(Math.PI / 2);
-    floor.position.y = -2;
-    floor.position.x = -pos.x;
-    floor.position.z = -pos.z;
+    this.floor.rotateX(Math.PI / 2);
+    this.floor.position.y = -2;
+    this.floor.position.x = -pos.x;
+    this.floor.position.z = -pos.z;
     this.walls = new THREE.Group();
-    this.walls.add(floor); // console.log(this.pos);
-
+    this.walls.add(this.floor);
     var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref, i) {
       var _ref2 = _slicedToArray(_ref, 4),
           x = _ref2[0],
@@ -34963,21 +34917,21 @@ function () {
           width = _ref2[2],
           depth = _ref2[3];
 
-      // console.log(i)
       var boxWidth = width * size.width;
       var boxHeight = depth * size.depth;
       var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
       var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-        color: 0x00ff00
+        color: 0x00ff00 + i * 0xff / 4
       }));
       wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
       return wall;
     });
     walls.forEach(function (w) {
-      return _this3.walls.add(w);
+      return _this.walls.add(w);
     });
     scene.add(this.walls);
-    console.log(this.walls);
+    this.walls.position.x = this.pos.x;
+    this.walls.position.z = this.pos.z;
   } //* Events
 
 
@@ -34993,7 +34947,7 @@ function () {
   }, {
     key: "emit",
     value: function emit(emitter, event) {
-      var _this4 = this;
+      var _this2 = this;
 
       for (var _len = arguments.length, data = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
         data[_key - 2] = arguments[_key];
@@ -35005,7 +34959,7 @@ function () {
             name: event,
             data: data,
             emitter: emitter,
-            room: _this4
+            room: _this2
           }].concat(data));
         });
       }
@@ -35038,16 +34992,56 @@ function () {
     key: "keyUp",
     value: function keyUp(evt) {
       if (this.player) this.player.keyUp(evt);
+    }
+  }, {
+    key: "mouseMove",
+    value: function mouseMove(evt) {
+      if (this.player) this.player.mouseMove(evt);
+    }
+  }, {
+    key: "mouseDown",
+    value: function mouseDown(evt) {
+      if (this.player) this.player.mouseDown(evt);
+    }
+  }, {
+    key: "mouseUp",
+    value: function mouseUp(evt) {
+      if (this.player) this.player.mouseUp(evt);
     } //*
 
   }, {
-    key: "update",
-    value: function update(dt) {
+    key: "updateBullets",
+    value: function updateBullets(dt) {
+      this.bullets.forEach(function (b) {
+        return b.update(dt);
+      });
+    }
+  }, {
+    key: "updatePlayer",
+    value: function updatePlayer(dt) {
       if (this.player && this.playerEntered) {
         this.player.update(dt);
-        this.walls.position.x = this.pos.x - this.player.pos.x;
-        this.walls.position.z = this.pos.z - this.player.pos.z;
       }
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      this.updateBullets(dt);
+      this.updatePlayer(dt);
+    }
+  }, {
+    key: "addBullet",
+    value: function addBullet(bullet) {
+      this.bullets.push(bullet);
+    }
+  }, {
+    key: "deleteBullet",
+    value: function deleteBullet(bullet) {
+      this.scene.remove(bullet.bullet);
+      bullet.bullet.geometry.dispose();
+      bullet.bullet.material.dispose(); // .dispose();
+
+      delete this.bullets.splice(this.bullets.indexOf(bullet), 1);
     }
   }]);
 
@@ -35056,83 +35050,327 @@ function () {
 
 exports.Room = Room;
 
-var NormalRoom =
+var WaveRoom =
 /*#__PURE__*/
 function (_Room) {
-  _inherits(NormalRoom, _Room);
+  _inherits(WaveRoom, _Room);
 
-  function NormalRoom(_difficulty) {
-    var _this5;
+  function WaveRoom(scene, player, size, pos) {
+    var _this3;
 
-    _classCallCheck(this, NormalRoom);
+    _classCallCheck(this, WaveRoom);
 
-    _this5.enemies = [];
-    _this5.bullets = [];
-    return _possibleConstructorReturn(_this5);
-  } //* Generation/reset
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, scene, player, size, pos));
+    _this3.enemies = [];
+    _this3.raycaster = new THREE.Raycaster();
+    _this3.mouse = {
+      x: 0,
+      y: 0
+    };
 
+    _this3.generateWave();
 
-  _createClass(NormalRoom, [{
-    key: "reset",
-    value: function reset() {
-      this.enitities = [];
+    return _this3;
+  }
+
+  _createClass(WaveRoom, [{
+    key: "generateWave",
+    value: function generateWave() {
+      var _this4 = this;
+
+      this.enemies = Array(5).fill(0).map(function (a) {
+        return new _entity.Creature(_this4, _this4.scene, {
+          x: Math.random() * _this4.size.width + _this4.pos.x,
+          z: Math.random() * _this4.size.depth + _this4.pos.z
+        }, 2);
+      });
     }
   }, {
-    key: "generateWave",
-    value: function generateWave(number) {
-      var _this6 = this;
+    key: "updateEnemies",
+    value: function updateEnemies(dt) {
+      var _this5 = this;
 
-      this.entities = Array(number).fill(seed()).map(function (s) {
-        return new Entity(_this6);
+      this.enemies.forEach(function (e) {
+        e.update(dt);
+
+        for (var i = 0; i < _this5.bullets.length; i++) {
+          var b = _this5.bullets[i];
+
+          if (b.collides(e)) {
+            _this5.deleteBullet(b);
+
+            _this5.deleteEnemy(e);
+
+            return;
+          }
+        }
       });
-    } //* draw+update;
-
-  }, {
-    key: "draw",
-    value: function draw() {}
+    }
   }, {
     key: "update",
     value: function update(dt) {
-      if (this.playerEntered) {
-        this.player.update(dt);
-        this.entities.forEach(function (entity) {
-          return entity.update(dt);
-        });
-        this.bullets.forEach(function (bullet) {
-          return bullet.update(dt);
-        });
+      this.raycaster.setFromCamera(this.mouse, this.player.camera);
+      var i = this.raycaster.intersectObject(this.floor);
+
+      if (i.length > 0) {
+        var pt = i[0].point;
+        this.player.lookAt(pt);
+
+        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
+          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
+        }
       }
-    }
-  }]);
 
-  return NormalRoom;
-}(Room);
-
-var EntryRoom =
-/*#__PURE__*/
-function (_Room2) {
-  _inherits(EntryRoom, _Room2);
-
-  function EntryRoom(seed) {
-    var _this7;
-
-    _classCallCheck(this, EntryRoom);
-
-    return _possibleConstructorReturn(_this7);
-  }
-
-  _createClass(EntryRoom, [{
-    key: "generate",
-    value: function generate() {// let
+      this.updateBullets(dt);
+      this.updatePlayer(dt);
+      this.updateEnemies(dt);
     }
   }, {
-    key: "extend",
-    value: function extend(x, y, l) {}
+    key: "deleteEnemy",
+    value: function deleteEnemy(enemy) {
+      this.scene.remove(enemy.box);
+      enemy.box.geometry.dispose();
+      enemy.box.material.dispose();
+      delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
+    }
+  }, {
+    key: "mouseMove",
+    value: function mouseMove(evt) {
+      this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
+      this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    } // this.reset = []
+
   }]);
 
-  return EntryRoom;
+  return WaveRoom;
 }(Room);
-},{"seed-random":"../node_modules/seed-random/index.js","three":"../node_modules/three/build/three.module.js","./weapon.js":"weapon.js"}],"index.js":[function(require,module,exports) {
+
+exports.WaveRoom = WaveRoom;
+},{"seed-random":"../node_modules/seed-random/index.js","three":"../node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.MeleeWeapon = exports.RangedWeapon = exports.Bullet = exports.Weapon = void 0;
+
+var _entity = require("./entity.js");
+
+var THREE = _interopRequireWildcard(require("three"));
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+//TODO:
+
+/*
+    - Draw Bullet
+    - Draw Melee
+    - Draw Ranged
+*/
+var Weapon =
+/*#__PURE__*/
+function () {
+  function Weapon(scene, name, damage, rate) {
+    _classCallCheck(this, Weapon);
+
+    this.scene = scene;
+    this.name = name;
+    this.type = "weapon"; // this.mount(player);
+
+    this.damage = damage;
+    this.rate = rate;
+    this.enabled = true;
+
+    this.triggerListener = function () {
+      return console.log('triggering');
+    };
+
+    this.player = null; // this.triggerCB = null;
+
+    this.triggering = false;
+    this.modifiers = [];
+  }
+
+  _createClass(Weapon, [{
+    key: "mount",
+    value: function mount(player) {
+      this.player = player;
+      this.room = player.room;
+    }
+  }, {
+    key: "unmount",
+    value: function unmount() {
+      this.room = null;
+      this.player = null;
+    }
+  }, {
+    key: "onTrigger",
+    value: function onTrigger(cb) {
+      this.triggerListener = cb;
+    }
+  }, {
+    key: "trigger",
+    value: function trigger() {
+      var _this = this;
+
+      if (this.enabled && this.player) {
+        this.triggerCB && this.triggerCB();
+        this.enabled = false;
+        setTimeout(function () {
+          _this.enabled = true;
+        }, this.rate);
+      }
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      if (this.triggering) this.trigger();
+    }
+  }]);
+
+  return Weapon;
+}();
+
+exports.Weapon = Weapon;
+var count = 0;
+
+var Bullet =
+/*#__PURE__*/
+function (_Entity) {
+  _inherits(Bullet, _Entity);
+
+  function Bullet(scene, gun, pos, angle) {
+    var _this2;
+
+    var speed = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
+    var size = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
+
+    _classCallCheck(this, Bullet);
+
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Bullet).call(this, scene, pos, angle, size, speed));
+    _this2.gun = gun;
+    _this2.id = count++;
+    _this2.room = _this2.gun.room;
+    return _this2;
+  }
+
+  _createClass(Bullet, [{
+    key: "initGeometry",
+    value: function initGeometry() {
+      this.bullet = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        color: 0x8800000
+      }));
+      this.bullet.position.x = this.pos.x;
+      this.bullet.position.z = this.pos.z;
+      return this.bullet;
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      this.updateByDirection(dt);
+      if (this.vel.x === 0 && this.vel.y === 0) this.room.deleteBullet(this);
+
+      if (this.room) {
+        if (this.pos.x > this.room.pos.x + this.room.size.width - 3) this.room.deleteBullet(this);
+        if (this.pos.z > this.room.pos.z + this.room.size.depth - 3) this.room.deleteBullet(this);
+        if (this.pos.x < this.room.pos.x + 3) this.room.deleteBullet(this);
+        if (this.pos.z < this.room.pos.z + 3) this.room.deleteBullet(this);
+      }
+
+      this.bullet.position.x = this.pos.x;
+      this.bullet.position.z = this.pos.z;
+    }
+  }]);
+
+  return Bullet;
+}(_entity.Entity);
+
+exports.Bullet = Bullet;
+
+var RangedWeapon =
+/*#__PURE__*/
+function (_Weapon) {
+  _inherits(RangedWeapon, _Weapon);
+
+  function RangedWeapon(scene, name, damage) {
+    var _this3;
+
+    var rate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+    var bulletSize = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0.5;
+    var bulletSpeed = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 10;
+
+    _classCallCheck(this, RangedWeapon);
+
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(RangedWeapon).call(this, scene, name, damage, rate)); // this.speed = rate;
+
+    _this3.bulletSize = bulletSize;
+    _this3.bulletSpeed = bulletSpeed;
+    return _this3;
+  }
+
+  _createClass(RangedWeapon, [{
+    key: "triggerCB",
+    value: function triggerCB() {
+      this.triggerListener("ranged", new Bullet(this.scene, this, Object.assign({}, this.player.pos), this.player.angle + Math.PI / 2, this.bulletSpeed, this.bulletSize));
+    }
+  }]);
+
+  return RangedWeapon;
+}(Weapon);
+
+exports.RangedWeapon = RangedWeapon;
+
+var MeleeWeapon =
+/*#__PURE__*/
+function (_Weapon2) {
+  _inherits(MeleeWeapon, _Weapon2);
+
+  function MeleeWeapon(name, _ref) {
+    var _this4;
+
+    var damage = _ref.damage,
+        range = _ref.range,
+        radius = _ref.radius,
+        speed = _ref.speed;
+
+    _classCallCheck(this, MeleeWeapon);
+
+    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(MeleeWeapon).call(this, name, damage));
+    _this4.range = range;
+    _this4.radius = radius;
+    return _this4;
+  }
+
+  _createClass(MeleeWeapon, [{
+    key: "triggerCB",
+    value: function triggerCB() {
+      this.triggerListener("melee", this);
+    }
+  }]);
+
+  return MeleeWeapon;
+}(Weapon);
+
+exports.MeleeWeapon = MeleeWeapon;
+},{"./entity.js":"entity.js","three":"../node_modules/three/build/three.module.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var THREE = _interopRequireWildcard(require("three"));
@@ -35141,10 +35379,15 @@ var _threeOrbitControls = _interopRequireDefault(require("three-orbit-controls")
 
 var _game = require("./game.js");
 
+var _entity = require("./entity.js");
+
+var _weapon = require("./weapon.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
+//#region Setup
 var OrbitControls = (0, _threeOrbitControls.default)(THREE);
 var container = document.getElementById('canvas');
 var renderer = new THREE.WebGLRenderer({
@@ -35152,36 +35395,24 @@ var renderer = new THREE.WebGLRenderer({
 });
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(50, 16 / 9, 1, 1000);
-var controls = new OrbitControls(camera);
-controls.enableKeys = false;
-controls.enabled = false;
-controls.maxPolarAngle = Math.PI / 2;
-controls.minDistance = 10;
-controls.maxDistance = 200;
-controls.minAzimuthAngle = 0; // radians
-
-controls.maxAzimuthAngle = Math.PI; // radians
-// var geo = new THREE.BoxGeometry(1, 1, 1)
-// var mat = new THREE.MeshBasicMaterial({
-//     wireframe: true,
-//     color: 0xffffff
-// });
-// var box = new THREE.Mesh(geo, mat)
-// scene.add(box);
-
 camera.position.set(0, 40, -80);
-camera.lookAt(new THREE.Vector3());
+var controls = new OrbitControls(camera);
+camera.controls = controls; //#endregion
+//#region Misc
+
 var start = performance.now();
 var prev = performance.now();
 var light = new THREE.AmbientLight(0x404040); // soft white light
 
-scene.add(light); // console.log();
+scene.add(light); //#endregion
+//#region Player
 
-var player = new _game.Player(scene, {
+var gun = new _weapon.RangedWeapon(scene, 'asdf', 2, 60, 1.5, 560);
+var player = new _entity.Player(scene, camera, {
   x: 0,
   z: 0
 });
-var room = new _game.Room(scene, player, {
+var room = new _game.WaveRoom(scene, player, {
   width: 100,
   depth: 100
 }, {
@@ -35189,7 +35420,20 @@ var room = new _game.Room(scene, player, {
   z: -50
 });
 room.mountPlayer();
-console.log(room.player); // scene.add(floor);
+player.mountWeapon(gun);
+gun.onTrigger(function (t, b) {
+  return room.addBullet(b);
+});
+controls.target = player.box.position;
+controls.update();
+controls.enableKeys = false;
+controls.enabled = false;
+controls.maxPolarAngle = Math.PI / 2;
+controls.minDistance = 10;
+controls.maxDistance = 200; // controls.minAzimuthAngle = Math.PI;
+// controls.maxAzimuthAngle = 2 * Math.PI;
+//#endregion
+//#region Dom
 
 window.addEventListener('resize', onWindowResize, false);
 container.appendChild(renderer.domElement);
@@ -35202,15 +35446,32 @@ document.body.addEventListener('keydown', function (evt) {
 document.body.addEventListener('keyup', function (evt) {
   if (evt.key === 'Control') controls.enabled = false;
   room.keyUp(evt);
+}); // document.body.addEventListener('keyreleased', function (evt) {
+//     if (evt.key === 'Control') controls.enabled = false;
+//     room.keyUp(evt);
+// });
+
+document.body.addEventListener('mousemove', function (evt) {
+  // if (evt.key === 'Control') controls.enabled = false;
+  room.mouseMove(evt);
 });
+document.body.addEventListener('mousedown', function (evt) {
+  // if (evt.key === 'Control') controls.enabled = false;
+  room.mouseDown(evt);
+});
+document.body.addEventListener('mouseup', function (evt) {
+  // if (evt.key === 'Control') controls.enabled = false;
+  room.mouseUp(evt);
+}); //#endregion
 
 function animate() {
-  var current = performance.now();
+  requestAnimationFrame(animate);
+  var current = +new Date();
   var dt = (current - prev) / 1000;
   room.update(dt);
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+  controls.update();
   prev = current;
+  renderer.render(scene, camera);
 }
 
 function onWindowResize() {
@@ -35218,7 +35479,7 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
-},{"three":"../node_modules/three/build/three.module.js","three-orbit-controls":"../node_modules/three-orbit-controls/index.js","./game.js":"game.js"}],"../../../../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"three":"../node_modules/three/build/three.module.js","three-orbit-controls":"../node_modules/three-orbit-controls/index.js","./game.js":"game.js","./entity.js":"entity.js","./weapon.js":"weapon.js"}],"../../../../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -35245,7 +35506,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50532" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55748" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
