@@ -146,7 +146,7 @@ export class Player extends Entity {
     }
 
     initGeometry() {
-        this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+      /*this.core = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
             color: 0xffffff,
         }));
         this.boxes = Array(3).fill(0).map(a => new THREE.Mesh(
@@ -184,6 +184,7 @@ export class Player extends Entity {
         //     color: 0xAAFFAA
         // }));
         // scene.add(this.debugger);
+        */
 
 
         return this.group;
@@ -210,7 +211,7 @@ export class Player extends Entity {
     handleWeapon(t, b) {
         ({
             'ranged': () => this.room.addBullet(b),
-            'melee': () => this.room.emit('melee')
+            'melee': () => this.room.melee(b)
         })[t]();
     }
 
