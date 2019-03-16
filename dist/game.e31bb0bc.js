@@ -34258,7 +34258,7 @@ function () {
    */
   function Entity(pos, angle, size, speed) {
     var angleComponents = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
-    var health = arguments.length > 5 ? arguments[5] : undefined;
+    var health = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 5;
 
     _classCallCheck(this, Entity);
 
@@ -34369,7 +34369,7 @@ function () {
     key: "updateMeshPosition",
     value: function updateMeshPosition() {
       // console.log(this);
-      this.geom.position.set(this.pos.x, 0, this.pos.z);
+      this.geom.position.set(this.pos.x, 5, this.pos.z);
       this.geom.rotation.y = -this.angle;
     }
   }, {
@@ -34399,6 +34399,11 @@ function () {
   }, {
     key: "isIn",
     value: function isIn(entity) {
+      // console.log(this.pos.x, entity.pos.x, entity.size.width,
+      // this.pos.x > entity.pos.x + entity.size.width,
+      //   this.pos.z > entity.pos.z + entity.size.depth,
+      //   this.pos.x + this.size < entity.pos.x,
+      //   this.pos.z + this.size < entity.pos.z);
       if (this.pos.x > entity.pos.x + entity.size.width) return false;
       if (this.pos.z > entity.pos.z + entity.size.depth) return false;
       if (this.pos.x + this.size < entity.pos.x) return false;
@@ -34462,7 +34467,6 @@ function (_Entity) {
       this.camera.controls.update();
       setInterval(function () {
         _this3.boxes.forEach(function (b) {
-          console.log(b);
           b.rotation.x += Math.random() - 0.5;
           b.rotation.y += Math.random() - 0.5;
           b.rotation.z += Math.random() - 0.5;
@@ -34511,13 +34515,15 @@ function (_Entity) {
           return _this4.room.addBullet(b);
         },
         'melee': function melee() {
-          return _this4.room.emit('melee');
+          return _this4.room.melee(b);
         }
       })[t]();
     }
   }, {
     key: "update",
     value: function update(dt) {
+      var _this5 = this;
+
       var cameraOffset = {
         x: this.camera.position.x - this.pos.x,
         y: this.camera.position.y,
@@ -34526,8 +34532,19 @@ function (_Entity) {
       this.updateByVelocity(dt);
 
       if (this.room) {
-        // if (!this.halls.some(h => this.isIn(h)) && !this.room.activated) {
-        this.clampTo(this.room); // }
+        // console.log(this.room.halls, this.room.halls.some(h => this.isIn(h)))
+        if (this.room.activated && !this.room.halls.some(function (h) {
+          return _this5.isIn(h);
+        })) {
+          this.clampTo(this.room);
+        }
+
+        for (var i = 0; i < this.room.neighbors.length; i++) {
+          if (this.isIn(this.room.neighbors[i])) {
+            this.room.exit();
+            this.enter(this.room.neighbors[i]);
+          }
+        }
       }
 
       this.updateMeshPosition();
@@ -34548,36 +34565,36 @@ function (_Entity) {
   }, {
     key: "keyDown",
     value: function keyDown(evt) {
-      var _this5 = this;
+      var _this6 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this5.walkX(1);
+          return _this6.walkX(1);
         },
         'ArrowRight': function ArrowRight() {
-          return _this5.walkX(-1);
+          return _this6.walkX(-1);
         },
         'ArrowUp': function ArrowUp() {
-          return _this5.walkZ(1);
+          return _this6.walkZ(1);
         },
         'ArrowDown': function ArrowDown() {
-          return _this5.walkZ(-1);
+          return _this6.walkZ(-1);
         },
         'KeyA': function KeyA() {
-          return _this5.walkX(1);
+          return _this6.walkX(1);
         },
         'KeyD': function KeyD() {
-          return _this5.walkX(-1);
+          return _this6.walkX(-1);
         },
         'KeyW': function KeyW() {
-          return _this5.walkZ(1);
+          return _this6.walkZ(1);
         },
         'KeyS': function KeyS() {
-          return _this5.walkZ(-1);
+          return _this6.walkZ(-1);
         },
         'Space': function Space() {
-          return _this5.weapons && _this5.trigger(true);
+          return _this6.weapons && _this6.trigger(true);
         }
       })[key] || function () {
         return 1;
@@ -34586,36 +34603,36 @@ function (_Entity) {
   }, {
     key: "keyUp",
     value: function keyUp(evt) {
-      var _this6 = this;
+      var _this7 = this;
 
       var key = evt.code;
       (({
         'ArrowLeft': function ArrowLeft() {
-          return _this6.walkX(0);
+          return _this7.walkX(0);
         },
         'ArrowRight': function ArrowRight() {
-          return _this6.walkX(0);
+          return _this7.walkX(0);
         },
         'ArrowUp': function ArrowUp() {
-          return _this6.walkZ(0);
+          return _this7.walkZ(0);
         },
         'ArrowDown': function ArrowDown() {
-          return _this6.walkZ(0);
+          return _this7.walkZ(0);
         },
         'KeyA': function KeyA() {
-          return _this6.walkX(0);
+          return _this7.walkX(0);
         },
         'KeyD': function KeyD() {
-          return _this6.walkX(0);
+          return _this7.walkX(0);
         },
         'KeyW': function KeyW() {
-          return _this6.walkZ(0);
+          return _this7.walkZ(0);
         },
         'KeyS': function KeyS() {
-          return _this6.walkZ(0);
+          return _this7.walkZ(0);
         },
         'Space': function Space() {
-          return _this6.trigger(false);
+          return _this7.trigger(false);
         }
       })[key] || function () {
         return 1;
@@ -34644,16 +34661,24 @@ function (_Entity2) {
   _inherits(Creature, _Entity2);
 
   function Creature(room, pos, size) {
-    var _this7;
+    var _this8;
 
     _classCallCheck(this, Creature);
 
-    _this7 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20, [], 10));
-    _this7.room = room;
-    return _this7;
+    _this8 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20, [], 10));
+    _this8.room = room;
+    _this8.damage = Math.floor(Math.random() * 5);
+    _this8.pLoc = null;
+    _this8.waiting = false;
+    return _this8;
   }
 
   _createClass(Creature, [{
+    key: "alertTo",
+    value: function alertTo(player) {
+      this.pLoc = player.pos;
+    }
+  }, {
     key: "initGeometry",
     value: function initGeometry() {
       this.geom = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
@@ -34663,9 +34688,24 @@ function (_Entity2) {
       return this.geom;
     }
   }, {
+    key: "wait",
+    value: function wait(t) {
+      var _this9 = this;
+
+      this.waiting = true;
+      setTimeout(function () {
+        _this9.waiting = false;
+      }, t);
+    }
+  }, {
     key: "update",
     value: function update(dt) {
-      if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
+      if (this.pLoc) {
+        this.lookAt(this.pLoc);
+      } else {
+        if (Math.random() > 0.9) this.angle += Math.random() - 0.5;
+      }
+
       this.updateByDirection(dt);
 
       if (this.room) {
@@ -34744,10 +34784,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -34758,92 +34794,103 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
 // import {
 //     Player
 // } from './'
 // export RangedWeapon;
-var Hall = function Hall(scene, player) {
-  var _this = this;
+var Hall =
+/*#__PURE__*/
+function () {
+  function Hall(size, from, to) {
+    _classCallCheck(this, Hall);
 
-  var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
-  var from = arguments.length > 3 ? arguments[3] : undefined;
-  var to = arguments.length > 4 ? arguments[4] : undefined;
-  var vertical = arguments.length > 5 ? arguments[5] : undefined;
+    this.vertical = from.pos.z !== to.pos.z;
+    from.halls.push(this);
+    to.halls.push(this);
+    from.neighbors.push(to);
+    to.neighbors.push(from);
 
-  _classCallCheck(this, Hall);
-
-  this.from = from;
-  this.to = to;
-  this.to.connect(this, from);
-  this.from.connect(this, to);
-  var fromTop = vertical ? from.pos.z > to.pos.z : from.pos.x > to.pos.y;
-  var x, z, width, depth;
-
-  if (vertical) {
-    width = size;
-    x = from.size.width / 2 + from.pos.x;
-
-    if (fromTop) {
-      z = from.pos.z - from.size.depth;
-      depth = z - to.size.depth;
+    if (this.vertical) {
+      this.size = {
+        width: size,
+        depth: (from.pos.z - to.pos.z - to.size.depth) * 2
+      };
+      this.pos = {
+        x: from.pos.x + from.size.width / 2 - size / 2,
+        z: to.pos.x + to.size.depth - (from.pos.z - to.pos.z - to.size.depth) / 2
+      };
     } else {
-      z = to.pos.z - to.size.depth;
-      depth = z - from.size.depth;
-    }
-  } else {
-    depth = size;
-    z = from.size.depth / 2 + from.pos.z;
-
-    if (fromTop) {
-      x = from.pos.x - from.size.width - 10;
-      width = Math.abs(x - to.size.width);
-    } else {
-      x = to.pos.x - to.size.width - 10;
-      width = Math.abs(x - from.size.width);
+      this.size = {
+        width: (from.pos.x - to.pos.x - to.size.width) * 2,
+        depth: size
+      };
+      this.pos = {
+        z: from.pos.z + from.size.depth / 2 - size / 2,
+        x: to.pos.z + to.size.width - (from.pos.x - to.pos.x - to.size.width) / 2
+      };
     }
   }
 
-  this.pos = {
-    x: x,
-    z: z
-  };
-  this.size = {
-    width: width,
-    depth: depth
-  };
-  this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
-    color: 0x888888,
-    side: THREE.DoubleSide
-  }));
-  this.floor.rotateX(Math.PI / 2);
-  this.floor.position.y = -2;
-  this.floor.position.x = -this.pos.x;
-  this.floor.position.z = -this.pos.z;
-  this.walls = new THREE.Group();
-  this.walls.add(this.floor);
-  var walls = (vertical ? [[0, 1, 1, 0], [0, 0, 1, 0]] : [[0, 0, 0, 1], [1, 0, 0, 1]]).map(function (_ref, i) {
-    var _ref2 = _slicedToArray(_ref, 4),
-        x = _ref2[0],
-        z = _ref2[1],
-        width = _ref2[2],
-        depth = _ref2[3];
+  _createClass(Hall, [{
+    key: "drawFloor",
+    value: function drawFloor(group) {
+      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
+        color: 0x555555,
+        side: THREE.DoubleSide
+      }));
+      this.floor.rotateX(Math.PI / 2); // this.floor.position.y = -2;
+      // this.floor.position.x = -this.pos.x;
+      // this.floor.position.z = -this.pos.z;
 
-    var boxWidth = width * size.width;
-    var boxHeight = depth * size.depth;
-    var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
-    var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-      color: 0x00ff00 + i * 0xff / 2
-    }));
-    wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
-    return wall;
-  });
-  walls.forEach(function (w) {
-    return _this.walls.add(w);
-  });
-  scene.add(this.walls);
-  this.walls.position.x = this.pos.x;
-  this.walls.position.z = this.pos.z;
-};
+      group.add(this.floor);
+    }
+  }, {
+    key: "drawWalls",
+    value: function drawWalls(group) {
+      var _this = this;
+
+      var walls = (this.vertical ? [[0, 0, 0, 1], [1, 0, 0, 1]] : [[0, 0, 1, 0], [0, 1, 1, 0]]).map(function (_ref, i) {
+        var _ref2 = _slicedToArray(_ref, 4),
+            x = _ref2[0],
+            z = _ref2[1],
+            width = _ref2[2],
+            depth = _ref2[3];
+
+        var boxWidth = width * _this.size.width;
+        var boxHeight = depth * _this.size.depth;
+        var geom = new THREE.BoxGeometry(boxWidth + 3, 30, boxHeight + 3);
+        var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+          color: 0x222222
+        }));
+        wall.position.set(x * _this.size.width + boxWidth / 2 + z * boxHeight, 0, z * _this.size.depth + boxHeight / 2 + x * boxWidth);
+        return wall;
+      });
+      walls.forEach(function (w) {
+        return group.add(w);
+      });
+    }
+  }, {
+    key: "draw",
+    value: function draw(scene) {
+      var group = new THREE.Group();
+      this.drawFloor(group);
+      this.drawWalls(group);
+      group.position.x = this.pos.x;
+      group.position.z = this.pos.z;
+      group.position.y = -5;
+      scene.add(group);
+      console.log('asdf', scene);
+      this.scene = scene;
+      console.log(this.scene);
+    }
+  }]);
+
+  return Hall;
+}();
 
 exports.Hall = Hall;
 
@@ -34855,6 +34902,8 @@ function () {
 
     this.level = level;
     this.bullets = [];
+    this.halls = [];
+    this.neighbors = [];
     this.activated = true;
     this.unlocked = true;
     this.connections = {
@@ -34872,15 +34921,14 @@ function () {
   _createClass(Room, [{
     key: "drawFloor",
     value: function drawFloor(group) {
-      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
+      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000, 2000, 8, 8), new THREE.MeshBasicMaterial({
         color: 0x555555,
         side: THREE.DoubleSide
       }));
       this.floor.rotateX(Math.PI / 2);
-      this.floor.position.y = -2;
-      this.floor.position.x = -this.pos.x;
-      this.floor.position.z = -this.pos.z;
       group.add(this.floor);
+      this.floor.position.x = -this.pos.x / 2;
+      this.floor.position.z = -this.pos.z / 2;
     }
   }, {
     key: "drawWalls",
@@ -34896,9 +34944,9 @@ function () {
 
         var boxWidth = width * _this2.size.width;
         var boxHeight = depth * _this2.size.depth;
-        var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+        var geom = new THREE.BoxGeometry(boxWidth + 3, 30, boxHeight + 3);
         var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-          color: 0x00ff00 + i * 0xff / 4
+          color: 0x222222
         }));
         wall.position.set(x * _this2.size.width + boxWidth / 2 + z * boxHeight, 0, z * _this2.size.depth + boxHeight / 2 + x * boxWidth);
         return wall;
@@ -34915,6 +34963,7 @@ function () {
       this.drawWalls(group);
       group.position.x = this.pos.x;
       group.position.z = this.pos.z;
+      group.position.y = -15;
       scene.add(group);
       console.log('asdf', scene);
       this.scene = scene;
@@ -34965,6 +35014,7 @@ function () {
 
       this.bullets.forEach(function (b) {
         b.update(dt);
+        if (!b.isIn(_this3)) _this3.deleteBullet(b);
 
         for (var i = 0; i < _this3.enemies.length; i++) {
           var e = _this3.enemies[i];
@@ -34983,8 +35033,10 @@ function () {
   }, {
     key: "update",
     value: function update(dt) {
-      this.updateBullets(dt);
-      this.updatePlayer(dt);
+      if (this.player) {
+        this.updateBullets(dt);
+        this.updatePlayer(dt);
+      }
     }
   }, {
     key: "addBullet",
@@ -35046,10 +35098,11 @@ function (_Room) {
   }, {
     key: "draw",
     value: function draw(scene) {
-      this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
-        color: 0xAAFFAA
-      }));
-      scene.add(this.debugger); // this.geometry = new THREE.Geometry();
+      // this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+      //     color: 0xAAFFAA
+      // }));
+      // scene.add(this.debugger);
+      // this.geometry = new THREE.Geometry();
       // this.geometry.vertices.push(
       //     new THREE.Vector3(-10, 0, 0),
       //     new THREE.Vector3(10, 0, 0)
@@ -35059,7 +35112,6 @@ function (_Room) {
       //     color: 0xAAFFAA
       // }));
       // scene.add(this.debugger);
-
       var group = new THREE.Group();
       this.drawFloor(group);
       this.drawWalls(group);
@@ -35068,6 +35120,7 @@ function (_Room) {
       });
       group.position.x = this.pos.x;
       group.position.z = this.pos.z;
+      group.position.y = -5;
       scene.add(group);
       this.scene = scene;
     }
@@ -35077,6 +35130,15 @@ function (_Room) {
       var _this6 = this;
 
       this.enemies.forEach(function (e) {
+        if (e.collides(_this6.player) && !e.waiting) {
+          console.log(e, _this6.player.health, e.damage);
+          e.wait(1);
+
+          _this6.player.takeDamage(e.damage);
+        }
+
+        ;
+        if (e.dist(_this6.player) <= 100) e.alertTo(_this6.player);
         e.update(dt);
 
         for (var i = 0; i < _this6.bullets.length; i++) {
@@ -35100,8 +35162,8 @@ function (_Room) {
 
       if (i.length > 0) {
         var pt = i[0].point;
-        this.player.lookAt(pt);
-        this.debugger.position.set(pt.x, pt.y, pt.z); // for (let i = 0; i < this.enemies.length; i++) {
+        this.player.lookAt(pt); // this.debugger.position.set(pt.x, pt.y, pt.z);
+        // for (let i = 0; i < this.enemies.length; i++) {
         //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
         // }
       }
@@ -35158,10 +35220,31 @@ function () {
       }, {
         x: -50,
         z: -50
+      }), new WaveRoom(1, {
+        width: 100,
+        depth: 100
+      }, {
+        x: 60,
+        z: -50
       })];
-      this.currentRoom = this.rooms[0];
-      if (this.player) this.currentRoom.player = this.player;
-      this.player.enter(this.rooms[0]);
+      this.halls = [new Hall(20, this.rooms[1], this.rooms[0])]; // this.rooms = Array(3).fill(0).map((_, i) =>
+      //     Array(2).fill(0).map((_, i2) =>
+      //         new WaveRoom(1, {
+      //             width: 100,
+      //             depth: 100,
+      //         }, {
+      //             x: -50 + 110 * i,
+      //             z: -50 + 110 * i2,
+      //         })
+      //     )
+      // ).reduce((a, b) => a.concat(b));
+      // console.log(this.rooms);
+      // // this.currentRoom = this.rooms[0];
+      // // if (this.player) this.currentRoom.player = this.player;
+
+      this.player.enter(this.rooms[0]); // this.rooms.forEach((a, i) => {
+      //     let neighbors = this.rooms.for
+      // })
     }
   }, {
     key: "add",
@@ -35188,7 +35271,7 @@ function () {
     key: "update",
     value: function update(dt) {
       this.player.update(dt);
-      this.currentRoom.update(dt);
+      this.player.room.update(dt);
     }
   }, {
     key: "keyDown",
@@ -35204,7 +35287,7 @@ function () {
     key: "mouseMove",
     value: function mouseMove(evt) {
       if (this.player && this.player.mouseMove) this.player.mouseMove(evt);
-      this.currentRoom.mouseMove(evt);
+      this.player.room.mouseMove(evt);
     }
   }, {
     key: "mouseDown",
@@ -35446,7 +35529,7 @@ var light = new THREE.AmbientLight(0x404040); // soft white light
 scene.add(light); //#endregion
 //#region Player
 
-var gun = new _weapon.RangedWeapon('asdf', 2, 60, 7.5, 260);
+var gun = new _weapon.RangedWeapon('asdf', 2, 60, 1.5, 260);
 var player = new _entity.Player(camera, {
   x: 0,
   z: 0
@@ -35544,7 +35627,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50624" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "61892" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

@@ -10,78 +10,77 @@ import {
 
 
 export class Hall {
-    constructor(scene, player, size = 5, from, to, vertical) {
-        this.from = from;
-        this.to = to;
-        this.to.connect(this, from);
-        this.from.connect(this, to);
+    constructor(size, from, to) {
+        this.vertical = from.pos.z !== to.pos.z;
+        from.halls.push(this);
+        to.halls.push(this);
+        from.neighbors.push(to);
+        to.neighbors.push(from);
 
-        let fromTop = vertical ? from.pos.z > to.pos.z : from.pos.x > to.pos.y;
-        let x, z, width, depth;
-        if (vertical) {
-            width = size;
-            x = from.size.width / 2 + from.pos.x;
-            if (fromTop) {
-                z = from.pos.z - from.size.depth;
-                depth = z - to.size.depth;
-            } else {
-                z = to.pos.z - to.size.depth;
-                depth = z - from.size.depth;
-            }
+        if (this.vertical) {
+            this.size = {
+                width: size,
+                depth: (from.pos.z - to.pos.z - to.size.depth) * 2,
+            };
+            this.pos = {
+                x: (from.pos.x + from.size.width / 2 - size / 2),
+                z: to.pos.x + to.size.depth - (from.pos.z - to.pos.z - to.size.depth) / 2,
+            };
         } else {
-            depth = size;
-            z = from.size.depth / 2 + from.pos.z;
-            if (fromTop) {
-                x = from.pos.x - from.size.width - 10;
-                width = Math.abs(x - to.size.width);
-            } else {
-                x = to.pos.x - to.size.width - 10;
-                width = Math.abs(x - from.size.width);
-            }
+            this.size = {
+                width: (from.pos.x - to.pos.x - to.size.width) * 2,
+                depth: size,
+            };
+            this.pos = {
+                z: (from.pos.z + from.size.depth / 2 - size / 2),
+                x: to.pos.z + to.size.width - (from.pos.x - to.pos.x - to.size.width) / 2,
+            };
         }
-        this.pos = {
-            x,
-            z
-        };
-        this.size = {
-            width,
-            depth
-        };
+    }
 
-
+    drawFloor(group) {
         this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
-            color: 0x888888,
+            color: 0x555555,
             side: THREE.DoubleSide
         }));
         this.floor.rotateX(Math.PI / 2);
-        this.floor.position.y = -2;
-        this.floor.position.x = -this.pos.x;
-        this.floor.position.z = -this.pos.z;
-
-        this.walls = new THREE.Group();
-        this.walls.add(this.floor);
-
-        let walls = (vertical ? [
-            [0, 1, 1, 0],
-            [0, 0, 1, 0],
-        ] : [
+        // this.floor.position.y = -2;
+        // this.floor.position.x = -this.pos.x;
+        // this.floor.position.z = -this.pos.z;
+        group.add(this.floor);
+    }
+    drawWalls(group) {
+        let walls = (this.vertical ? [
             [0, 0, 0, 1],
             [1, 0, 0, 1],
+        ] : [
+            [0, 0, 1, 0],
+            [0, 1, 1, 0],
         ]).map(([x, z, width, depth], i) => {
-            let boxWidth = width * size.width;
-            let boxHeight = depth * size.depth;
-            let geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+            let boxWidth = width * this.size.width;
+            let boxHeight = depth * this.size.depth;
+            let geom = new THREE.BoxGeometry(boxWidth + 3, 30, boxHeight + 3);
             let wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-                color: 0x00ff00 + (i * 0xff / 2),
+                color: 0x222222,
             }));
-            wall.position.set(x * size.width + boxWidth / 2 + (z * boxHeight), 0, z * size.depth + boxHeight / 2 + (x * boxWidth));
+            wall.position.set(x * this.size.width + boxWidth / 2 + (z * boxHeight), 0, z * this.size.depth + boxHeight / 2 + (x * boxWidth));
             return wall;
         });
-        walls.forEach(w => this.walls.add(w));
-        scene.add(this.walls);
+        walls.forEach(w => group.add(w))
+    }
+    draw(scene) {
+        let group = new THREE.Group();
+        this.drawFloor(group);
+        this.drawWalls(group);
 
-        this.walls.position.x = this.pos.x;
-        this.walls.position.z = this.pos.z;
+        group.position.x = this.pos.x;
+        group.position.z = this.pos.z;
+        group.position.y = -5;
+
+        scene.add(group);
+        console.log('asdf', scene);
+        this.scene = scene;
+        console.log(this.scene);
     }
 }
 export class Room {
@@ -89,6 +88,8 @@ export class Room {
         this.level = level;
 
         this.bullets = [];
+        this.halls = [];
+        this.neighbors = [];
 
         this.activated = true;
         this.unlocked = true;
@@ -108,15 +109,14 @@ export class Room {
     }
 
     drawFloor(group) {
-        this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
+        this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000, 2000, 8, 8), new THREE.MeshBasicMaterial({
             color: 0x555555,
             side: THREE.DoubleSide
         }));
         this.floor.rotateX(Math.PI / 2);
-        this.floor.position.y = -2;
-        this.floor.position.x = -this.pos.x;
-        this.floor.position.z = -this.pos.z;
-        group.add(this.floor)
+        group.add(this.floor);
+        this.floor.position.x = -this.pos.x / 2;
+        this.floor.position.z = -this.pos.z / 2;
     }
     drawWalls(group) {
         let walls = [
@@ -127,9 +127,9 @@ export class Room {
         ].map(([x, z, width, depth], i) => {
             let boxWidth = width * this.size.width;
             let boxHeight = depth * this.size.depth;
-            let geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
+            let geom = new THREE.BoxGeometry(boxWidth + 3, 30, boxHeight + 3);
             let wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-                color: 0x00ff00 + (i * 0xff / 4),
+                color: 0x222222,
             }));
             wall.position.set(x * this.size.width + boxWidth / 2 + (z * boxHeight), 0, z * this.size.depth + boxHeight / 2 + (x * boxWidth));
             return wall;
@@ -143,6 +143,7 @@ export class Room {
 
         group.position.x = this.pos.x;
         group.position.z = this.pos.z;
+        group.position.y = -15;
 
         scene.add(group);
         console.log('asdf', scene);
@@ -180,6 +181,7 @@ export class Room {
     updateBullets(dt) {
         this.bullets.forEach(b => {
             b.update(dt);
+            if (!b.isIn(this)) this.deleteBullet(b);
             for (let i = 0; i < this.enemies.length; i++) {
                 let e = this.enemies[i];
                 if (b.collides(e)) {
@@ -192,8 +194,10 @@ export class Room {
         this.player && this.player.update(dt);
     }
     update(dt) {
-        this.updateBullets(dt);
-        this.updatePlayer(dt);
+        if (this.player) {
+            this.updateBullets(dt);
+            this.updatePlayer(dt);
+        }
     }
 
     addBullet(bullet) {
@@ -232,10 +236,10 @@ export class WaveRoom extends Room {
     }
 
     draw(scene) {
-        this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
-            color: 0xAAFFAA
-        }));
-        scene.add(this.debugger);
+        // this.debugger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
+        //     color: 0xAAFFAA
+        // }));
+        // scene.add(this.debugger);
         // this.geometry = new THREE.Geometry();
         // this.geometry.vertices.push(
         //     new THREE.Vector3(-10, 0, 0),
@@ -254,6 +258,7 @@ export class WaveRoom extends Room {
 
         group.position.x = this.pos.x;
         group.position.z = this.pos.z;
+        group.position.y = -5;
 
         scene.add(group);
         this.scene = scene;
@@ -261,6 +266,12 @@ export class WaveRoom extends Room {
 
     updateEnemies(dt) {
         this.enemies.forEach(e => {
+            if (e.collides(this.player) && !e.waiting) {
+                console.log(e, this.player.health, e.damage);
+                e.wait(1);
+                this.player.takeDamage(e.damage)
+            };
+            if (e.dist(this.player) <= 100) e.alertTo(this.player);
             e.update(dt);
             for (let i = 0; i < this.bullets.length; i++) {
                 let b = this.bullets[i];
@@ -281,7 +292,7 @@ export class WaveRoom extends Room {
         if (i.length > 0) {
             let pt = i[0].point;
             this.player.lookAt(pt);
-            this.debugger.position.set(pt.x, pt.y, pt.z);
+            // this.debugger.position.set(pt.x, pt.y, pt.z);
             // for (let i = 0; i < this.enemies.length; i++) {
             //     if (Math.abs(this.player.angleTo(this.enemies[i].pos)) <= 0.5) this.player.lookAt(this.enemies[i].pos);
             // }
@@ -327,10 +338,36 @@ export class Level {
         }, {
             x: -50,
             z: -50
+        }), new WaveRoom(1, {
+            width: 100,
+            depth: 100
+        }, {
+            x: 60,
+            z: -50
         })];
-        this.currentRoom = this.rooms[0];
-        if (this.player) this.currentRoom.player = this.player;
+
+        this.halls = [new Hall(20, this.rooms[1], this.rooms[0])];
+
+        // this.rooms = Array(3).fill(0).map((_, i) =>
+        //     Array(2).fill(0).map((_, i2) =>
+        //         new WaveRoom(1, {
+        //             width: 100,
+        //             depth: 100,
+        //         }, {
+        //             x: -50 + 110 * i,
+        //             z: -50 + 110 * i2,
+        //         })
+        //     )
+        // ).reduce((a, b) => a.concat(b));
+        // console.log(this.rooms);
+
+        // // this.currentRoom = this.rooms[0];
+        // // if (this.player) this.currentRoom.player = this.player;
         this.player.enter(this.rooms[0]);
+
+        // this.rooms.forEach((a, i) => {
+        //     let neighbors = this.rooms.for
+        // })
     }
 
     add(player) {
@@ -351,7 +388,7 @@ export class Level {
 
     update(dt) {
         this.player.update(dt);
-        this.currentRoom.update(dt);
+        this.player.room.update(dt);
     }
 
     keyDown(evt) {
@@ -362,7 +399,7 @@ export class Level {
     }
     mouseMove(evt) {
         if (this.player && this.player.mouseMove) this.player.mouseMove(evt);
-        this.currentRoom.mouseMove(evt);
+        this.player.room.mouseMove(evt);
     }
     mouseDown(evt) {
         if (this.player && this.player.mouseDown) this.player.mouseDown(evt);
