@@ -3,16 +3,8 @@ import {
 } from "./entity.js";
 import * as THREE from 'three';
 
-//TODO:
-/*
-    - Draw Bullet
-    - Draw Melee
-    - Draw Ranged
-*/
-
 export class Weapon {
-    constructor(scene, name, damage, rate) {
-        this.scene = scene;
+    constructor(name, damage, rate) {
         this.name = name;
         this.type = "weapon";
 
@@ -31,14 +23,8 @@ export class Weapon {
         this.modifiers = [];
     }
 
-    mount(player) {
+    setOwner(player) {
         this.player = player;
-        this.room = player.room;
-    }
-
-    unmount() {
-        this.room = null;
-        this.player = null;
     }
 
     onTrigger(cb) {
@@ -55,47 +41,32 @@ export class Weapon {
         }
     }
 
-    update(dt) {
-        if (this.triggering) this.trigger();
-    }
 }
 let count = 0;
 export class Bullet extends Entity {
-    constructor(scene, gun, pos, angle, speed = 1, size = 1) {
-        super(scene, pos, angle, size, speed);
+    constructor(gun, speed = 1, size = 1) {
+        super();
         this.gun = gun;
         this.id = count++;
         this.room = this.gun.room;
     }
+
     initGeometry() {
         this.bullet = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
             color: 0x8800000
         }));
-        this.bullet.position.x = this.pos.x;
-        this.bullet.position.z = this.pos.z;
         return this.bullet;
     }
 
     update(dt) {
         this.updateByDirection(dt);
-
-        if (this.vel.x === 0 && this.vel.y === 0) this.room.deleteBullet(this);
-        if (this.room) {
-            if (this.pos.x > this.room.pos.x + this.room.size.width - 3) this.room.deleteBullet(this);
-            if (this.pos.z > this.room.pos.z + this.room.size.depth - 3) this.room.deleteBullet(this);
-            if (this.pos.x < this.room.pos.x + 3) this.room.deleteBullet(this);
-            if (this.pos.z < this.room.pos.z + 3) this.room.deleteBullet(this);
-        }
-
-        this.bullet.position.x = this.pos.x;
-        this.bullet.position.z = this.pos.z;
+        this.updateMeshPosition();
     }
 }
 
 export class RangedWeapon extends Weapon {
-    constructor(scene, name, damage, rate = 1, bulletSize = 0.5, bulletSpeed = 10) {
-        super(scene, name, damage, rate);
-        // this.speed = rate;
+    constructor(name, damage = 1, rate = 1, bulletSize = 0.5, bulletSpeed = 10) {
+        super(name, damage, rate);
         this.bulletSize = bulletSize;
         this.bulletSpeed = bulletSpeed;
     }
@@ -109,13 +80,8 @@ export class RangedWeapon extends Weapon {
 }
 
 export class MeleeWeapon extends Weapon {
-    constructor(name, {
-        damage,
-        range,
-        radius,
-        speed
-    }) {
-        super(name, damage);
+    constructor(name, damage, range, radius, rate) {
+        super(name, damage, rate);
         this.range = range;
         this.radius = radius;
     }
