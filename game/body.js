@@ -10,7 +10,7 @@ class Body extends Entity {
    * @param health {Number} - The HP of the Body. Usually from 100-1000.
    * @param coords {Object {x {Number},z {Number}} - The coordinates on a 2D plane of the Body.
    */
-  constructor(defense) {
+  constructor(defense,health,coords) {
     this.random=new Math.seedrandom("Fox is weird!");
     this.defense=defense;
   }
@@ -20,6 +20,10 @@ class Body extends Entity {
   }
   takeSword(){
 
+  }
+
+  update(dt){
+    this.updateByVelocity(dt);
   }
 
 }

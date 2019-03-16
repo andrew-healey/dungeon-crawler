@@ -1,15 +1,20 @@
 import * as THREE from 'three';
 export class Entity {
+
     /**
      * Describes the Entity class, which handles movement, rendering and collision of objects.
      * @constructor
      * @param pos {Object {x {Number},z {Number}}} - The coordinates of the Entity's center.
+     * @param angle {Number} - The angle by which the Entity (containing the children as well) is rotated about its origin.
+     * @param size {Number} - The radius of the hitbox of the Entity.
+     * @param speed {Number} - The initial speed of the Entity-like for bullets
+     * @param vel {Object {x {Number},y {Number},z {Number}}} - The direction of the velocity vector.
+     * @param angleComponents {Object {... {Number}}} - The individual components of the angle, which are summed to find the net angle.
+     * @todo Add a y coordinate that defaults to 0
      */
-    constructor(pos = {
-        x: 0,
-        z: 0
-    }, angle = 0, size = 1, speed = 1) {
+    constructor(pos, angle, size, speed, vel, angleComponents = {}) {
         this.room = null;
+
         this.pos = pos;
         this.vel = {
             x: 0,
@@ -18,9 +23,12 @@ export class Entity {
         this.angle = angle;
         this.size = size;
         this.speed = speed;
-        console.log(this)
+        this.angleComponents = angleComponents;
     }
 
+    rotateComponent(changeObj) {
+        return Object.assign(this.angleComponents, changeObj);
+    }
     draw(scene) {
         if (this.initGeometry) {
             this.geom = this.initGeometry();
@@ -60,7 +68,7 @@ export class Entity {
         return {
             x: Math.cos(this.angle),
             z: Math.sin(this.angle),
-        }
+        };
     }
 
 
@@ -240,17 +248,17 @@ export class Creature extends Entity {
     }
 
     initGeometry() {
-        this.box = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
+        this.model = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
             wireframe: false,
             color: 0xffffff
         }));
-        return this.box;
+        return this.model;
     }
 
     update(dt) {
         if (Math.random() > 0.9) this.angle += Math.random() - 0.5
 
-        this.updateByDirection(dt, this.box);
+        this.updateByDirection(dt, this.model);
 
         if (this.room) {
             if (this.pos.x > this.room.pos.x + this.room.size.width - 3) {
