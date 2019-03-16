@@ -34212,182 +34212,6 @@ module.exports = function( THREE ) {
 	return OrbitControls;
 };
 
-},{}],"../node_modules/seed-random/index.js":[function(require,module,exports) {
-var global = arguments[3];
-'use strict';
-
-var width = 256;// each RC4 output is 0 <= x < 256
-var chunks = 6;// at least six RC4 outputs for each double
-var digits = 52;// there are 52 significant digits in a double
-var pool = [];// pool: entropy pool starts empty
-var GLOBAL = typeof global === 'undefined' ? window : global;
-
-//
-// The following constants are related to IEEE 754 limits.
-//
-var startdenom = Math.pow(width, chunks),
-    significance = Math.pow(2, digits),
-    overflow = significance * 2,
-    mask = width - 1;
-
-
-var oldRandom = Math.random;
-
-//
-// seedrandom()
-// This is the seedrandom function described above.
-//
-module.exports = function(seed, options) {
-  if (options && options.global === true) {
-    options.global = false;
-    Math.random = module.exports(seed, options);
-    options.global = true;
-    return Math.random;
-  }
-  var use_entropy = (options && options.entropy) || false;
-  var key = [];
-
-  // Flatten the seed string or build one from local entropy if needed.
-  var shortseed = mixkey(flatten(
-    use_entropy ? [seed, tostring(pool)] :
-    0 in arguments ? seed : autoseed(), 3), key);
-
-  // Use the seed to initialize an ARC4 generator.
-  var arc4 = new ARC4(key);
-
-  // Mix the randomness into accumulated entropy.
-  mixkey(tostring(arc4.S), pool);
-
-  // Override Math.random
-
-  // This function returns a random double in [0, 1) that contains
-  // randomness in every bit of the mantissa of the IEEE 754 value.
-
-  return function() {         // Closure to return a random double:
-    var n = arc4.g(chunks),             // Start with a numerator n < 2 ^ 48
-        d = startdenom,                 //   and denominator d = 2 ^ 48.
-        x = 0;                          //   and no 'extra last byte'.
-    while (n < significance) {          // Fill up all significant digits by
-      n = (n + x) * width;              //   shifting numerator and
-      d *= width;                       //   denominator and generating a
-      x = arc4.g(1);                    //   new least-significant-byte.
-    }
-    while (n >= overflow) {             // To avoid rounding up, before adding
-      n /= 2;                           //   last byte, shift everything
-      d /= 2;                           //   right using integer Math until
-      x >>>= 1;                         //   we have exactly the desired bits.
-    }
-    return (n + x) / d;                 // Form the number within [0, 1).
-  };
-};
-
-module.exports.resetGlobal = function () {
-  Math.random = oldRandom;
-};
-
-//
-// ARC4
-//
-// An ARC4 implementation.  The constructor takes a key in the form of
-// an array of at most (width) integers that should be 0 <= x < (width).
-//
-// The g(count) method returns a pseudorandom integer that concatenates
-// the next (count) outputs from ARC4.  Its return value is a number x
-// that is in the range 0 <= x < (width ^ count).
-//
-/** @constructor */
-function ARC4(key) {
-  var t, keylen = key.length,
-      me = this, i = 0, j = me.i = me.j = 0, s = me.S = [];
-
-  // The empty key [] is treated as [0].
-  if (!keylen) { key = [keylen++]; }
-
-  // Set up S using the standard key scheduling algorithm.
-  while (i < width) {
-    s[i] = i++;
-  }
-  for (i = 0; i < width; i++) {
-    s[i] = s[j = mask & (j + key[i % keylen] + (t = s[i]))];
-    s[j] = t;
-  }
-
-  // The "g" method returns the next (count) outputs as one number.
-  (me.g = function(count) {
-    // Using instance members instead of closure state nearly doubles speed.
-    var t, r = 0,
-        i = me.i, j = me.j, s = me.S;
-    while (count--) {
-      t = s[i = mask & (i + 1)];
-      r = r * width + s[mask & ((s[i] = s[j = mask & (j + t)]) + (s[j] = t))];
-    }
-    me.i = i; me.j = j;
-    return r;
-    // For robust unpredictability discard an initial batch of values.
-    // See http://www.rsa.com/rsalabs/node.asp?id=2009
-  })(width);
-}
-
-//
-// flatten()
-// Converts an object tree to nested arrays of strings.
-//
-function flatten(obj, depth) {
-  var result = [], typ = (typeof obj)[0], prop;
-  if (depth && typ == 'o') {
-    for (prop in obj) {
-      try { result.push(flatten(obj[prop], depth - 1)); } catch (e) {}
-    }
-  }
-  return (result.length ? result : typ == 's' ? obj : obj + '\0');
-}
-
-//
-// mixkey()
-// Mixes a string seed into a key that is an array of integers, and
-// returns a shortened string seed that is equivalent to the result key.
-//
-function mixkey(seed, key) {
-  var stringseed = seed + '', smear, j = 0;
-  while (j < stringseed.length) {
-    key[mask & j] =
-      mask & ((smear ^= key[mask & j] * 19) + stringseed.charCodeAt(j++));
-  }
-  return tostring(key);
-}
-
-//
-// autoseed()
-// Returns an object for autoseeding, using window.crypto if available.
-//
-/** @param {Uint8Array=} seed */
-function autoseed(seed) {
-  try {
-    GLOBAL.crypto.getRandomValues(seed = new Uint8Array(width));
-    return tostring(seed);
-  } catch (e) {
-    return [+new Date, GLOBAL, GLOBAL.navigator && GLOBAL.navigator.plugins,
-            GLOBAL.screen, tostring(pool)];
-  }
-}
-
-//
-// tostring()
-// Converts an array of charcodes to a string
-//
-function tostring(a) {
-  return String.fromCharCode.apply(0, a);
-}
-
-//
-// When seedrandom.js is loaded, we immediately mix a few bits
-// from the built-in RNG into the entropy pool.  Because we do
-// not want to intefere with determinstic PRNG state later,
-// seedrandom will not call Math.random on its own again after
-// initialization.
-//
-mixkey(Math.random(), pool);
-
 },{}],"entity.js":[function(require,module,exports) {
 "use strict";
 
@@ -34449,10 +34273,14 @@ function () {
   }
 
   _createClass(Entity, [{
-    key: "render",
-    value: function render() {
-      this.scene = this.room.scene;
-      this.initGeometry && this.scene.add(this.initGeometry());
+    key: "draw",
+    value: function draw(scene) {
+      if (this.initGeometry) {
+        this.geom = this.initGeometry();
+        this.geom.position.set(this.pos.x, 0, this.pos.z);
+        this.geom.rotation.y = -this.angle;
+        scene.add(this.geom);
+      }
     }
   }, {
     key: "enter",
@@ -34512,7 +34340,7 @@ function () {
     }
   }, {
     key: "updateByVelocity",
-    value: function updateByVelocity(dt, mesh) {
+    value: function updateByVelocity(dt) {
       this.pos.x += dt * this.vel.x * this.speed;
       this.pos.z += dt * this.vel.z * this.speed;
       return {
@@ -34521,16 +34349,11 @@ function () {
       };
     }
   }, {
-    key: "draw",
-    value: function draw() {}
-  }, {
-    key: "update",
-    value: function update() {}
-    /**
-     * Determines if the entity is contacting the given entity.
-     * @param entity {Entity} - The entity with which this might be colliding.
-     */
-
+    key: "updateMeshPosition",
+    value: function updateMeshPosition() {
+      this.geom.position.set(this.pos.x, 0, this.pos.z);
+      this.geom.rotation.y = -this.angle;
+    }
   }, {
     key: "dist",
     value: function dist(entity) {
@@ -34543,8 +34366,12 @@ function () {
   }, {
     key: "collides",
     value: function collides(entity) {
-      console.log(this.dist(entity), this.size + entity.size);
       return this.dist(entity) <= this.size + entity.size;
+    }
+  }, {
+    key: "contains",
+    value: function contains(entity) {
+      return this.dist(entity) + entity.radius > this.radius;
     }
   }, {
     key: "angleTo",
@@ -34554,11 +34381,6 @@ function () {
   }, {
     key: "isIn",
     value: function isIn(entity) {
-      // console.log(entity, this)
-      // console.log(this.pos.x, entity.pos.x + entity.size.width);
-      // console.log(this.pos.z > entity.pos.z + entity.size.depth);
-      // console.log(this.pos.x + this.size < entity.pos.x);
-      // console.log(this.pos.z + this.size < entity.pos.z);
       if (this.pos.x > entity.pos.x + entity.size.width) return false;
       if (this.pos.z > entity.pos.z + entity.size.depth) return false;
       if (this.pos.x + this.size < entity.pos.x) return false;
@@ -34585,18 +34407,13 @@ var Player =
 function (_Entity) {
   _inherits(Player, _Entity);
 
-  function Player(scene, camera, pos) {
+  function Player(camera, pos) {
     var _this2;
 
     _classCallCheck(this, Player);
 
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Player).call(this, scene, pos, 0, 3, 30));
+    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(Player).call(this, pos, 0, 3, 30));
     _this2.camera = camera;
-
-    _this2.camera.lookAt(_this2.box.position);
-
-    _this2.camera.controls.update();
-
     _this2.weapons = [];
     _this2.triggering = false;
     return _this2;
@@ -34609,14 +34426,15 @@ function (_Entity) {
         wireframe: true,
         color: 0xffffff
       }));
-      this.box.position.set(this.pos.x, 0, this.pos.z);
+      this.camera.lookAt(this.box.position);
+      this.camera.controls.update();
       return this.box;
     }
   }, {
     key: "equip",
     value: function equip(weapon) {
       this.weapons.unshift(weapon);
-      this.weapon.setOwner(this);
+      weapon.setOwner(this);
     }
   }, {
     key: "drop",
@@ -34640,11 +34458,9 @@ function (_Entity) {
         y: this.camera.position.y,
         z: this.camera.position.z - this.pos.z
       };
-      this.updateByVelocity(dt, this.box);
+      this.updateByVelocity(dt);
 
       if (this.room) {
-        console.log(this.halls, this.isIn(this.halls[0]));
-
         if (!this.halls.some(function (h) {
           return _this3.isIn(h);
         }) && !this.room.activated) {
@@ -34652,9 +34468,7 @@ function (_Entity) {
         }
       }
 
-      this.box.position.x = this.pos.x;
-      this.box.position.z = this.pos.z;
-      this.box.rotation.y = -this.angle;
+      this.updateMeshPosition();
 
       if (this.weapons.length >= 1 && this.triggering) {
         this.weapons[0].trigger();
@@ -34766,12 +34580,12 @@ var Creature =
 function (_Entity2) {
   _inherits(Creature, _Entity2);
 
-  function Creature(room, scene, pos, size) {
+  function Creature(room, pos, size) {
     var _this6;
 
     _classCallCheck(this, Creature);
 
-    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, scene, pos, Math.random() * Math.PI * 2, size, 20));
+    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Creature).call(this, pos, Math.random() * Math.PI * 2, size, 20));
     _this6.room = room;
     return _this6;
   }
@@ -34783,7 +34597,6 @@ function (_Entity2) {
         wireframe: false,
         color: 0xffffff
       }));
-      this.box.position.set(this.pos.x, 0, this.pos.z);
       return this.box;
     }
   }, {
@@ -34828,9 +34641,7 @@ function (_Entity2) {
         }
       }
 
-      this.box.position.x = this.pos.x;
-      this.box.position.z = this.pos.z;
-      this.box.rotation.y = -this.angle;
+      this.updateMeshPosition();
     }
   }]);
 
@@ -34844,9 +34655,7 @@ exports.Creature = Creature;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Level = exports.Room = exports.WaveRoom = exports.Hall = void 0;
-
-var _seedRandom = _interopRequireDefault(require("seed-random"));
+exports.Level = exports.WaveRoom = exports.Room = exports.Hall = void 0;
 
 var THREE = _interopRequireWildcard(require("three"));
 
@@ -34854,13 +34663,7 @@ var _entity = require("./entity.js");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
@@ -34875,6 +34678,10 @@ function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.g
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
@@ -34976,102 +34783,6 @@ var Hall = function Hall(scene, player) {
 
 exports.Hall = Hall;
 
-var WaveRoom =
-/*#__PURE__*/
-function (_Room) {
-  _inherits(WaveRoom, _Room);
-
-  function WaveRoom(scene, player, size, pos) {
-    var _this2;
-
-    _classCallCheck(this, WaveRoom);
-
-    _this2 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, scene, player, size, pos));
-    _this2.enemies = [];
-    _this2.raycaster = new THREE.Raycaster();
-    _this2.mouse = {
-      x: 0,
-      y: 0
-    };
-
-    _this2.generateWave();
-
-    return _this2;
-  }
-
-  _createClass(WaveRoom, [{
-    key: "generateWave",
-    value: function generateWave() {
-      var _this3 = this;
-
-      this.enemies = Array(5).fill(0).map(function (a) {
-        return new _entity.Creature(_this3, _this3.scene, {
-          x: Math.random() * _this3.size.width + _this3.pos.x,
-          z: Math.random() * _this3.size.depth + _this3.pos.z
-        }, 2);
-      });
-    }
-  }, {
-    key: "updateEnemies",
-    value: function updateEnemies(dt) {
-      var _this4 = this;
-
-      this.enemies.forEach(function (e) {
-        e.update(dt);
-
-        for (var i = 0; i < _this4.bullets.length; i++) {
-          var b = _this4.bullets[i];
-
-          if (b.collides(e)) {
-            _this4.deleteBullet(b);
-
-            _this4.deleteEnemy(e);
-
-            return;
-          }
-        }
-      });
-    }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      this.raycaster.setFromCamera(this.mouse, this.player.camera);
-      var i = this.raycaster.intersectObject(this.floor);
-
-      if (i.length > 0) {
-        var pt = i[0].point;
-        this.player.lookAt(pt);
-
-        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
-          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
-        }
-      }
-
-      _get(_getPrototypeOf(WaveRoom.prototype), "update", this).call(this, dt);
-
-      this.updateEnemies(dt);
-    }
-  }, {
-    key: "deleteEnemy",
-    value: function deleteEnemy(enemy) {
-      this.scene.remove(enemy.box);
-      enemy.box.geometry.dispose();
-      enemy.box.material.dispose();
-      delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
-    }
-  }, {
-    key: "mouseMove",
-    value: function mouseMove(evt) {
-      this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
-      this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
-    }
-  }]);
-
-  return WaveRoom;
-}(Room);
-
-exports.WaveRoom = WaveRoom;
-
 var Room =
 /*#__PURE__*/
 function () {
@@ -35097,19 +34808,21 @@ function () {
   _createClass(Room, [{
     key: "drawFloor",
     value: function drawFloor(group) {
-      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(size.width, size.depth, 8, 8), new THREE.MeshBasicMaterial({
+      this.floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(this.size.width, this.size.depth, 8, 8), new THREE.MeshBasicMaterial({
         color: 0x555555,
         side: THREE.DoubleSide
       }));
       this.floor.rotateX(Math.PI / 2);
       this.floor.position.y = -2;
-      this.floor.position.x = -pos.x;
-      this.floor.position.z = -pos.z;
+      this.floor.position.x = -this.pos.x;
+      this.floor.position.z = -this.pos.z;
       group.add(this.floor);
     }
   }, {
     key: "drawWalls",
     value: function drawWalls(group) {
+      var _this2 = this;
+
       var walls = [[0, 0, 1, 0], [0, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1]].map(function (_ref3, i) {
         var _ref4 = _slicedToArray(_ref3, 4),
             x = _ref4[0],
@@ -35117,13 +34830,13 @@ function () {
             width = _ref4[2],
             depth = _ref4[3];
 
-        var boxWidth = width * size.width;
-        var boxHeight = depth * size.depth;
+        var boxWidth = width * _this2.size.width;
+        var boxHeight = depth * _this2.size.depth;
         var geom = new THREE.BoxGeometry(boxWidth + 3, 5, boxHeight + 3);
         var wall = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
           color: 0x00ff00 + i * 0xff / 4
         }));
-        wall.position.set(x * size.width + boxWidth / 2 + z * boxHeight, 0, z * size.depth + boxHeight / 2 + x * boxWidth);
+        wall.position.set(x * _this2.size.width + boxWidth / 2 + z * boxHeight, 0, z * _this2.size.depth + boxHeight / 2 + x * boxWidth);
         return wall;
       });
       walls.forEach(function (w) {
@@ -35216,6 +34929,102 @@ function () {
 
 exports.Room = Room;
 
+var WaveRoom =
+/*#__PURE__*/
+function (_Room) {
+  _inherits(WaveRoom, _Room);
+
+  function WaveRoom(level, size, pos) {
+    var _this3;
+
+    _classCallCheck(this, WaveRoom);
+
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(WaveRoom).call(this, level, size, pos));
+    _this3.enemies = [];
+    _this3.raycaster = new THREE.Raycaster();
+    _this3.mouse = {
+      x: 0,
+      y: 0
+    };
+
+    _this3.generateWave();
+
+    return _this3;
+  }
+
+  _createClass(WaveRoom, [{
+    key: "generateWave",
+    value: function generateWave() {
+      var _this4 = this;
+
+      this.enemies = Array(5).fill(0).map(function (a) {
+        return new _entity.Creature(_this4, _this4.scene, {
+          x: Math.random() * _this4.size.width + _this4.pos.x,
+          z: Math.random() * _this4.size.depth + _this4.pos.z
+        }, 2);
+      });
+    }
+  }, {
+    key: "updateEnemies",
+    value: function updateEnemies(dt) {
+      var _this5 = this;
+
+      this.enemies.forEach(function (e) {
+        e.update(dt);
+
+        for (var i = 0; i < _this5.bullets.length; i++) {
+          var b = _this5.bullets[i];
+
+          if (b.collides(e)) {
+            _this5.deleteBullet(b);
+
+            _this5.deleteEnemy(e);
+
+            return;
+          }
+        }
+      });
+    }
+  }, {
+    key: "update",
+    value: function update(dt) {
+      this.raycaster.setFromCamera(this.mouse, this.player.camera);
+      var i = this.raycaster.intersectObject(this.floor);
+
+      if (i.length > 0) {
+        var pt = i[0].point;
+        this.player.lookAt(pt);
+
+        for (var _i2 = 0; _i2 < this.enemies.length; _i2++) {
+          if (Math.abs(this.player.angleTo(this.enemies[_i2].pos)) <= 0.5) this.player.lookAt(this.enemies[_i2].pos);
+        }
+      }
+
+      _get(_getPrototypeOf(WaveRoom.prototype), "update", this).call(this, dt);
+
+      this.updateEnemies(dt);
+    }
+  }, {
+    key: "deleteEnemy",
+    value: function deleteEnemy(enemy) {
+      this.scene.remove(enemy.box);
+      enemy.box.geometry.dispose();
+      enemy.box.material.dispose();
+      delete this.enemies.splice(this.enemies.indexOf(enemy), 1);
+    }
+  }, {
+    key: "mouseMove",
+    value: function mouseMove(evt) {
+      this.mouse.x = evt.clientX / window.innerWidth * 2 - 1;
+      this.mouse.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    }
+  }]);
+
+  return WaveRoom;
+}(Room);
+
+exports.WaveRoom = WaveRoom;
+
 var Level =
 /*#__PURE__*/
 function () {
@@ -35235,7 +35044,34 @@ function () {
   _createClass(Level, [{
     key: "generate",
     value: function generate() {
-      this.rooms.push([new WaveRoom(), [[new WaveRoom()], [new WaveRoom()], [new WaveRoom()]]]);
+      this.rooms = [new WaveRoom(1, {
+        width: 100,
+        depth: 100
+      }, {
+        x: -50,
+        y: -50
+      }), [// [new WaveRoom(1, {
+        //     width: 100,
+        //     depth: 100
+        // }, {
+        //     x: -50,
+        //     y: -50
+        // })],
+        // [new WaveRoom(1, {
+        //     width: 100,
+        //     depth: 100
+        // }, {
+        //     x: -50,
+        //     y: -50
+        // })],
+        // [new WaveRoom(1, {
+        //     width: 100,
+        //     depth: 100
+        // }, {
+        //     x: -50,
+        //     y: -50
+        // })]
+      ]];
     }
   }, {
     key: "add",
@@ -35245,13 +35081,53 @@ function () {
   }, {
     key: "draw",
     value: function draw(scene) {
-      this.rooms.forEach(function (a) {
-        return a.draw(scene);
-      });
+      console.log(this.rooms);
+
+      var drawRoom = function drawRoom(_ref6) {
+        var _ref7 = _slicedToArray(_ref6, 2),
+            room = _ref7[0],
+            neighbors = _ref7[1];
+
+        console.log(room);
+        room.draw(scene);
+        (neighbors || []).map(drawRoom);
+      };
+
+      drawRoom(this.rooms);
       this.halls.forEach(function (a) {
         return a.draw(scene);
       });
       this.player.draw(scene);
+    }
+  }, {
+    key: "update",
+    value: function update() {
+      this.player.update();
+    }
+  }, {
+    key: "keyDown",
+    value: function keyDown(evt) {
+      if (this.player && this.player.keyDown) this.player.keyDown(evt);
+    }
+  }, {
+    key: "keyUp",
+    value: function keyUp(evt) {
+      if (this.player && this.player.keyUp) this.player.keyUp(evt);
+    }
+  }, {
+    key: "mouseMove",
+    value: function mouseMove(evt) {
+      if (this.player && this.player.mouseMove) this.player.mouseMove(evt);
+    }
+  }, {
+    key: "mouseDown",
+    value: function mouseDown(evt) {
+      if (this.player && this.player.mouseDown) this.player.mouseDown(evt);
+    }
+  }, {
+    key: "mouseUp",
+    value: function mouseUp(evt) {
+      if (this.player && this.player.mouseUp) this.player.mouseUp(evt);
     }
   }]);
 
@@ -35259,7 +35135,7 @@ function () {
 }();
 
 exports.Level = Level;
-},{"seed-random":"../node_modules/seed-random/index.js","three":"../node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
+},{"three":"../node_modules/three/build/three.module.js","./entity.js":"entity.js"}],"weapon.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35371,25 +35247,13 @@ function (_Entity) {
       this.bullet = new THREE.Mesh(new THREE.BoxGeometry(this.size, this.size, this.size), new THREE.MeshBasicMaterial({
         color: 0x8800000
       }));
-      this.bullet.position.x = this.pos.x;
-      this.bullet.position.z = this.pos.z;
       return this.bullet;
     }
   }, {
     key: "update",
     value: function update(dt) {
       this.updateByDirection(dt);
-      if (this.vel.x === 0 && this.vel.y === 0) this.room.deleteBullet(this);
-
-      if (this.room) {
-        if (this.pos.x > this.room.pos.x + this.room.size.width - 3) this.room.deleteBullet(this);
-        if (this.pos.z > this.room.pos.z + this.room.size.depth - 3) this.room.deleteBullet(this);
-        if (this.pos.x < this.room.pos.x + 3) this.room.deleteBullet(this);
-        if (this.pos.z < this.room.pos.z + 3) this.room.deleteBullet(this);
-      }
-
-      this.bullet.position.x = this.pos.x;
-      this.bullet.position.z = this.pos.z;
+      this.updateMeshPosition();
     }
   }]);
 
@@ -35403,17 +35267,17 @@ var RangedWeapon =
 function (_Weapon) {
   _inherits(RangedWeapon, _Weapon);
 
-  function RangedWeapon(scene, name, damage) {
+  function RangedWeapon(name) {
     var _this3;
 
-    var rate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
-    var bulletSize = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0.5;
-    var bulletSpeed = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 10;
+    var damage = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var rate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var bulletSize = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.5;
+    var bulletSpeed = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 10;
 
     _classCallCheck(this, RangedWeapon);
 
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(RangedWeapon).call(this, scene, name, damage, rate)); // this.speed = rate;
-
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(RangedWeapon).call(this, name, damage, rate));
     _this3.bulletSize = bulletSize;
     _this3.bulletSpeed = bulletSpeed;
     return _this3;
@@ -35436,17 +35300,12 @@ var MeleeWeapon =
 function (_Weapon2) {
   _inherits(MeleeWeapon, _Weapon2);
 
-  function MeleeWeapon(name, _ref) {
+  function MeleeWeapon(name, damage, range, radius, rate) {
     var _this4;
-
-    var damage = _ref.damage,
-        range = _ref.range,
-        radius = _ref.radius,
-        speed = _ref.speed;
 
     _classCallCheck(this, MeleeWeapon);
 
-    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(MeleeWeapon).call(this, name, damage));
+    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(MeleeWeapon).call(this, name, damage, rate));
     _this4.range = range;
     _this4.radius = radius;
     return _this4;
@@ -35505,14 +35364,16 @@ var player = new _entity.Player(camera, {
   x: 0,
   z: 0
 });
-var level = new Level({
+var level = new _game.Level({
   min: 4,
   max: 5
-});
-player.enter(room1);
+}); // player.enter(room1);
+
 player.equip(gun);
 level.add(player);
-level.draw(scene); //#region Controls
+level.generate();
+level.draw(scene);
+console.log(scene); //#region Controls
 
 controls.target = player.box.position;
 controls.update();
@@ -35531,13 +35392,11 @@ animate();
 onWindowResize();
 document.body.addEventListener('keydown', function (evt) {
   if (evt.key === 'Control') controls.enabled = true;
-  room1.keyDown(evt);
-  room2.keyDown(evt);
+  level.keyDown(evt);
 });
 document.body.addEventListener('keyup', function (evt) {
   if (evt.key === 'Control') controls.enabled = false;
-  room1.keyUp(evt);
-  room2.keyUp(evt);
+  level.keyUp(evt);
 }); // document.body.addEventListener('keyreleased', function (evt) {
 //     if (evt.key === 'Control') controls.enabled = false;
 //     room1.keyUp(evt);
@@ -35545,26 +35404,22 @@ document.body.addEventListener('keyup', function (evt) {
 
 document.body.addEventListener('mousemove', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room1.mouseMove(evt);
-  room2.mouseMove(evt);
+  level.mouseMove(evt);
 });
 document.body.addEventListener('mousedown', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room1.mouseDown(evt);
-  room2.mouseDown(evt);
+  level.mouseDown(evt);
 });
 document.body.addEventListener('mouseup', function (evt) {
   // if (evt.key === 'Control') controls.enabled = false;
-  room1.mouseUp(evt);
-  room2.mouseUp(evt);
+  level.mouseUp(evt);
 }); //#endregion
 
 function animate() {
   requestAnimationFrame(animate);
   var current = +new Date();
   var dt = (current - prev) / 1000;
-  room1.update(dt);
-  room2.update(dt);
+  level.update(dt);
   controls.update();
   prev = current;
   renderer.render(scene, camera);
@@ -35602,7 +35457,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59964" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52214" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

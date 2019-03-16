@@ -5,7 +5,8 @@ let OrbitControls = OrbitControlConstructor(THREE);
 
 import {
     Hall,
-    WaveRoom
+    WaveRoom,
+    Level
 } from './game.js';
 import {
     Player
@@ -47,10 +48,13 @@ let level = new Level({
     max: 5,
 });
 
-player.enter(room1);
+// player.enter(room1);
 player.equip(gun);
 level.add(player);
+level.generate();
 level.draw(scene);
+
+console.log(scene);
 
 //#region Controls
 controls.target = player.box.position;
@@ -75,13 +79,11 @@ onWindowResize();
 
 document.body.addEventListener('keydown', function (evt) {
     if (evt.key === 'Control') controls.enabled = true;
-    room1.keyDown(evt);
-    room2.keyDown(evt);
+    level.keyDown(evt);
 });
 document.body.addEventListener('keyup', function (evt) {
     if (evt.key === 'Control') controls.enabled = false;
-    room1.keyUp(evt);
-    room2.keyUp(evt);
+    level.keyUp(evt);
 });
 // document.body.addEventListener('keyreleased', function (evt) {
 //     if (evt.key === 'Control') controls.enabled = false;
@@ -89,18 +91,15 @@ document.body.addEventListener('keyup', function (evt) {
 // });
 document.body.addEventListener('mousemove', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room1.mouseMove(evt);
-    room2.mouseMove(evt);
+    level.mouseMove(evt);
 });
 document.body.addEventListener('mousedown', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room1.mouseDown(evt);
-    room2.mouseDown(evt);
+    level.mouseDown(evt);
 });
 document.body.addEventListener('mouseup', function (evt) {
     // if (evt.key === 'Control') controls.enabled = false;
-    room1.mouseUp(evt);
-    room2.mouseUp(evt);
+    level.mouseUp(evt);
 });
 //#endregion
 
@@ -111,8 +110,7 @@ function animate() {
     let current = +new Date;
     let dt = (current - prev) / 1000;
 
-    room1.update(dt);
-    room2.update(dt);
+    level.update(dt);
     controls.update();
 
     prev = current;

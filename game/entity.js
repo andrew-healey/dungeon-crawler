@@ -21,9 +21,13 @@ export class Entity {
         this.speed = speed;
     }
 
-    render() {
-        this.scene = this.room.scene;
-        this.initGeometry && this.scene.add(this.initGeometry());
+    draw(scene) {
+        if (this.initGeometry) {
+            this.geom = this.initGeometry();
+            this.geom.position.set(this.pos.x, 0, this.pos.z);
+            this.geom.rotation.y = -this.angle;
+            scene.add(this.geom);
+        }
     }
 
     enter(room) {
@@ -71,7 +75,7 @@ export class Entity {
             z: dt * unit.z * this.speed,
         }
     }
-    updateByVelocity(dt, mesh) {
+    updateByVelocity(dt) {
         this.pos.x += dt * this.vel.x * this.speed;
         this.pos.z += dt * this.vel.z * this.speed;
         return {
@@ -79,21 +83,21 @@ export class Entity {
             z: dt * this.vel.z * this.speed,
         }
     }
+    updateMeshPosition() {
+        this.geom.position.set(this.pos.x, 0, this.pos.z);
+        this.geom.rotation.y = -this.angle;
+    }
 
-    draw() {}
-    update() {}
-
-    /**
-     * Determines if the entity is contacting the given entity.
-     * @param entity {Entity} - The entity with which this might be colliding.
-     */
     dist(entity) {
         return Math.sqrt(['x', 'z'].reduce((a, b) => a + Math.pow(this.pos[b] - entity.pos[b], 2), 0));
     }
 
     collides(entity) {
-        console.log(this.dist(entity), this.size + entity.size)
         return this.dist(entity) <= this.size + entity.size;
+    }
+
+    contains(entity) {
+        return this.dist(entity) + entity.radius > this.radius;
     }
 
     angleTo(pt) {
@@ -101,17 +105,13 @@ export class Entity {
     }
 
     isIn(entity) {
-        // console.log(entity, this)
-        // console.log(this.pos.x, entity.pos.x + entity.size.width);
-        // console.log(this.pos.z > entity.pos.z + entity.size.depth);
-        // console.log(this.pos.x + this.size < entity.pos.x);
-        // console.log(this.pos.z + this.size < entity.pos.z);
         if (this.pos.x > entity.pos.x + entity.size.width) return false;
         if (this.pos.z > entity.pos.z + entity.size.depth) return false;
         if (this.pos.x + this.size < entity.pos.x) return false;
         if (this.pos.z + this.size < entity.pos.z) return false;
         return true;
     }
+
     clampTo(entity) {
         if (this.pos.x > entity.pos.x + entity.size.width) this.pos.x = entity.pos.x + entity.size.width;
         if (this.pos.z > entity.pos.z + entity.size.depth) this.pos.z = entity.pos.z + this.room.size.depth;
@@ -120,12 +120,10 @@ export class Entity {
     }
 }
 export class Player extends Entity {
-    constructor(scene, camera, pos) {
-        super(scene, pos, 0, 3, 30);
+    constructor(camera, pos) {
+        super(pos, 0, 3, 30);
 
         this.camera = camera;
-        this.camera.lookAt(this.box.position);
-        this.camera.controls.update();
 
         this.weapons = [];
         this.triggering = false;
@@ -137,14 +135,15 @@ export class Player extends Entity {
             new THREE.MeshBasicMaterial({
                 wireframe: true,
                 color: 0xffffff
-            }))
-        this.box.position.set(this.pos.x, 0, this.pos.z);
+            }));
+        this.camera.lookAt(this.box.position);
+        this.camera.controls.update();
         return this.box;
     }
 
     equip(weapon) {
         this.weapons.unshift(weapon);
-        this.weapon.setOwner(this);
+        weapon.setOwner(this);
     }
     drop(weapon) {
         this.weapons.splice(this.weapons.indexof(weapons), 1);
@@ -164,17 +163,15 @@ export class Player extends Entity {
             z: this.camera.position.z - this.pos.z,
         };
 
-        this.updateByVelocity(dt, this.box);
+        this.updateByVelocity(dt);
 
         if (this.room) {
-            console.log(this.halls, this.isIn(this.halls[0]));
             if (!this.halls.some(h => this.isIn(h)) && !this.room.activated) {
                 this.clampTo(this.room);
             }
         }
-        this.box.position.x = this.pos.x;
-        this.box.position.z = this.pos.z;
-        this.box.rotation.y = -this.angle;
+
+        this.updateMeshPosition();
 
         if (this.weapons.length >= 1 && this.triggering) {
             this.weapons[0].trigger();
@@ -222,13 +219,14 @@ export class Player extends Entity {
     mouseDown(evt) {
         this.weapon.length >= 1 && this.trigger(true)
     }
+
     mouseUp(evt) {
-        this.trigger(false)
+        this.trigger(false);
     }
 }
 export class Creature extends Entity {
-    constructor(room, scene, pos, size) {
-        super(scene, pos, Math.random() * Math.PI * 2, size, 20);
+    constructor(room, pos, size) {
+        super(pos, Math.random() * Math.PI * 2, size, 20);
         this.room = room;
     }
 
@@ -237,7 +235,6 @@ export class Creature extends Entity {
             wireframe: false,
             color: 0xffffff
         }));
-        this.box.position.set(this.pos.x, 0, this.pos.z);
         return this.box;
     }
 
@@ -272,8 +269,7 @@ export class Creature extends Entity {
                 this.lookAt(a);
             }
         }
-        this.box.position.x = this.pos.x;
-        this.box.position.z = this.pos.z;
-        this.box.rotation.y = -this.angle;
+
+        this.updateMeshPosition();
     }
 }

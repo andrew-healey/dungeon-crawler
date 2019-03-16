@@ -8,14 +8,20 @@ class BodyPart extends Entity {
    * @param parent {BodyPart} - The parent BodyPart that will control this BodyPart.
    * @param children {BodyPart[]} - The children BodyParts that this BodyPart will control - of a specified BodyPart type.
    * @param defense {Number} - The defense by which to divide raw damage taken.
+   * @param specificType {string} - A string representing what type of weapon it is.
    */
-  constructor(coords, size = 4, type = "body", parent, children = [], defense = 1) {
+  constructor(coords, size = 4, type = "body", parent, children = [], defense = 1, specificType) {
     this.parent = parent;
     this.children = children;
     super(coords, angle, size);
     this.defense = defense;
-    this.type=type;
-    this.yRotation=0;
+    this.type = type;
+    if (type === "weapon") this.specificType = specificType || "sword";
+    else if (type === "appendage") this.specificType = specificType || "leg";
+    this.yRotation = 0;
+    this.animationTime = 0;
+    this.period = this.size / 2;
+    this.customAnimation=false;
   }
 
   /**
@@ -63,8 +69,8 @@ class BodyPart extends Entity {
           x: bullet.position.x - this.position.x,
           z: bullet.position.z - this.position.z
         };
-        let newBullet=new Entity(modifiedBulletOrigin,bullet.angle,bullet.size);
-        currDamage+=child.takeBullet(newBullet,damage);
+        let newBullet = new Entity(modifiedBulletOrigin, bullet.angle, bullet.size);
+        currDamage += child.takeBullet(newBullet, damage);
       }
     }
     return currDamage / this.defense;
@@ -73,14 +79,41 @@ class BodyPart extends Entity {
   /**
    * Moves the entity in a direction.
    */
-  walk(velocity,timeSpent){
-    if(this.type=="body"){
-      this.position.x+=cos(rotation)*velocity;
-      this.position.y+=sin(rotation)*velocity;
+  walk(velocity, timeSpent) {
+    if (this.type == "body") {
+      this.position.x += cos(rotation) * velocity;
+      this.position.y += sin(rotation) * velocity;
+    } else if (this.type == "appendage") {
+      baseRotation = (baseRotation + timeSpent) / this.period
+      //Set the y position over time equal to the 
+      this.yRotation = Math.atan(Math.tan(Math.abs(baseRotation)) ** 3);
     }
-    else if(this.type=="appendage"){
-      //TODO
+  }
+
+  /*
+   * Attack animation.
+   * @param weaponNum {Number} - The index of the weapon that is attacking.
+   * @param weaponId {string} - The specific type of the weapon to discharge.
+   * @param directionSign {Boolean} - The sign of the direction that the sword will attack.
+   * @param timeUsed {Number} - The time that the weapon has been attacking for.
+   */
+  useWeapon(weaponNum, weaponName, directionSign, timeUsed) {
+    if (this.type == "weapon") {
+      if (this.specificType !== weaponId) return weaponNum;
+      if (weaponNum > 0) return weaponNum - 1;
+      if (this.specificType === "sword") this.parent.angle = Math.atan(Math.tan(Math.abs(timeUsed * velocity / this.period)));
+      else if (this.specificType === "gun") {
+        if(timeUsed<this.period/4||timeUsed>3*this.period/4) return -1;
+        this.customAnimation = true;
+      }
+      return -1;
     }
+
+    for (let i = 0; i < children.length; i++) {
+      weaponNum = child.useWeapon(weaponNum, weaponId, directionSign, timeUsed);
+      if (weaponNum < 0) return weaponNum;
+    }
+    return weaponNum;
   }
 
 }
